@@ -1,0 +1,29 @@
+<Application
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:rc="using:ReCap.CommonUI"
+  RequestedThemeVariant="Dark"
+  x:Class="ReCap.Parser.Editor.App">
+  
+  <Application.Styles>
+    <rc:ReCapTheme/>
+
+    <Style Selector="TreeView > TreeViewItem:nth-child(odd):not(:selected):not(:pointerover)">
+      <Setter Property="Background" Value="#202020" />
+    </Style>
+    <Style Selector="TreeViewItem TreeViewItem:nth-child(odd):not(:selected):not(:pointerover)">
+      <Setter Property="Background" Value="#202020" />
+    </Style>
+  </Application.Styles>
+
+  <Application.Resources>
+    <Color x:Key="SystemAccentColor">#378FB6</Color>
+    <Color x:Key="SystemAccentColorDark1">#2B7291</Color>
+    <Color x:Key="SystemAccentColorDark2">#1F536B</Color>
+    <Color x:Key="SystemAccentColorLight1">#5BDEF3</Color>
+    <Color x:Key="SystemAccentColorLight2">#93F5FF</Color>
+
+    <FontFamily x:Key="Geist">avares://ReCap.Parser.Editor/Assets/Geist#Geist</FontFamily>
+    <FontFamily x:Key="GeistMono">avares://ReCap.Parser.Editor/Assets/GeistMono#Geist Mono</FontFamily>
+  </Application.Resources>
+</Application>
