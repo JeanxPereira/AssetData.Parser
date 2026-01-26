@@ -2,11 +2,15 @@
 
 ### Catalog
 <details open>
-<summary>Structures (35)</summary>
+<summary>Structures (39)</summary>
 
 * [AffixTuning](Catalog/Structures/AffixTuning)
+* [AIDefinition](Catalog/Structures/AIDefinition)
 * [AudioTriggerDef](Catalog/Structures/AudioTriggerDef)
+* [cAINode](Catalog/Structures/cAINode)
 * [cAssetProperty](Catalog/Structures/cAssetProperty)
+* [Catalog](Catalog/Structures/Catalog)
+* [CatalogEntry](Catalog/Structures/CatalogEntry)
 * [cDoorDef](Catalog/Structures/cDoorDef)
 * [cGambitDefinition](Catalog/Structures/cGambitDefinition)
 * [cGameObjectGfxStateData](Catalog/Structures/cGameObjectGfxStateData)
