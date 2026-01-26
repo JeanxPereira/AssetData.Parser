@@ -83,21 +83,23 @@ jobs:
     - name: Prepare Assets
       shell: pwsh
       run: |
-        Get-ChildItem "./publish-cli/*${{ matrix.ext }}" | Select-Object -First 1 | ForEach-Object {
-            Move-Item $_.FullName "./ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}" -Force
-        }
+        $cliFile = Get-ChildItem "./publish-cli/*${{ matrix.ext }}" | Select-Object -First 1
+        if ($cliFile) { Move-Item $cliFile.FullName "./ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}" -Force }
         
-        Get-ChildItem "./publish-editor/*${{ matrix.ext }}" | Select-Object -First 1 | ForEach-Object {
-            Move-Item $_.FullName "./ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}" -Force
-        }
+        $editorFile = Get-ChildItem "./publish-editor/*${{ matrix.ext }}" | Select-Object -First 1
+        if ($editorFile) { Move-Item $editorFile.FullName "./ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}" -Force }
 
-    - name: Upload Build Artifacts
+    - name: Upload CLI Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ReCap-Builds-${{ matrix.name }}
-        path: |
-          ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}
-          ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}
+        name: ReCap-CLI-${{ matrix.name }}
+        path: ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}
+
+    - name: Upload Editor Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ReCap-Editor-${{ matrix.name }}
+        path: ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}
 
   release:
     name: Create Release
@@ -107,7 +109,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download Artifacts
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
