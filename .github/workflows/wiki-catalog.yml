@@ -8,7 +8,8 @@ on:
       - 'src/Core/TypeSystem.cs'
       - 'src/CLI/Commands/WikiCatalog.cs'
       - '.github/workflows/update-wiki.yml'
-
+  workflow_dispatch:
+    
 permissions:
   contents: write
 
