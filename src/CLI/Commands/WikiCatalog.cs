@@ -185,8 +185,7 @@ public static class WikiCatalog
             sb.AppendLine();
             foreach (var user in users.OrderBy(u => u))
             {
-                // Link relativo corrigido para apontar para Structures
-                sb.AppendLine($"- [`{user}`](../{FolderStructures}/{user})");
+                sb.AppendLine($"- [`{user}`]({FolderCatalog}/{FolderStructures}/{user})");
             }
             sb.AppendLine();
         }
@@ -197,15 +196,13 @@ public static class WikiCatalog
         if (field.Type == DataType.Struct)
         {
             var name = field.ElementType ?? "Unknown";
-            // Link relativo corrigido
-            return $"[`{name}`](../{FolderStructures}/{name})";
+            return $"[`{name}`]({FolderCatalog}/{FolderStructures}/{name})";
         }
         if (field.Type == DataType.Enum)
         {
             var name = field.EnumType ?? "Unknown";
-            // Link relativo corrigido
             return field.EnumType != null 
-                ? $"[`Enum<{name}>`](../{FolderEnums}/{name})" 
+                ? $"[`Enum<{name}>`]({FolderCatalog}/{FolderEnums}/{name})"
                 : "`Enum`";
         }
         if (field.Type == DataType.Array)
@@ -213,7 +210,7 @@ public static class WikiCatalog
             var inner = field.ElementType ?? "Unknown";
             bool isPrim = Enum.TryParse<DataType>(inner, true, out _);
             if (!isPrim)
-                return $"`Array<`[`{inner}`](../{FolderStructures}/{inner})`>`";
+                return $"`Array<`[`{inner}`]({FolderCatalog}/{FolderStructures}/{inner})`>`";
             return $"`Array<{inner.ToLower()}>`";
         }
         return $"`{field.Type.ToString().ToLower()}`";
