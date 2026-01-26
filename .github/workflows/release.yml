@@ -40,12 +40,13 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/ReCap.Parser.sln') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
     - name: Restore Dependencies
-      run: dotnet restore ReCap.Parser.sln
+      run: dotnet restore ReCap.Parser.sln -r ${{ matrix.rid }}
+
     - name: Run Tests
       run: dotnet test ReCap.Parser.sln --no-restore --verbosity normal
 
@@ -76,9 +77,9 @@ jobs:
         $cliDir = "src/CLI/ReCap.Parser.CLI/bin/Release/net9.0/${{ matrix.rid }}/publish"
         $editorDir = "src/Editor/ReCap.Parser.Editor/bin/Release/net9.0/${{ matrix.rid }}/publish"
         
-        Compress-Archive -Path "$cliDir/*" -DestinationPath "ReCap-CLI-${{ matrix.name }}.zip"
-        Compress-Archive -Path "$editorDir/*" -DestinationPath "ReCap-Editor-${{ matrix.name }}.zip"
-        Compress-Archive -Path "output/core/*" -DestinationPath "ReCap-Core-${{ matrix.name }}.zip"
+        if (Test-Path $cliDir) { Compress-Archive -Path "$cliDir/*" -DestinationPath "ReCap-CLI-${{ matrix.name }}.zip" }
+        if (Test-Path $editorDir) { Compress-Archive -Path "$editorDir/*" -DestinationPath "ReCap-Editor-${{ matrix.name }}.zip" }
+        if (Test-Path "output/core") { Compress-Archive -Path "output/core/*" -DestinationPath "ReCap-Core-${{ matrix.name }}.zip" }
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
