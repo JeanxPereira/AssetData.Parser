@@ -98,6 +98,8 @@ public sealed class EnumDefinition
     private readonly Dictionary<uint, string> _values = new();
     private readonly Dictionary<string, uint> _names = new(StringComparer.OrdinalIgnoreCase);
     
+    public IReadOnlyDictionary<uint, string> Values => _values;
+    
     public EnumDefinition(string name) => Name = name;
     
     public void Add(string name, uint value)
