@@ -7,14 +7,19 @@ public static class WikiCatalog
 {
     private static readonly Dictionary<string, HashSet<string>> _usagesMap = new();
 
+    private const string FolderStructures = "Structures";
+    private const string FolderEnums = "Enums";
+    private const string FolderCatalog = "Catalog";
+
     public static void Run(string outputDir)
     {
-        Console.WriteLine($"[WikiGen] Starting documentation generation in: {outputDir}");
+        Console.WriteLine($"[WikiGen] Generating Wiki in: {outputDir}");
 
-        var catalogDir = Path.Combine(outputDir, "Catalog");
-        var structsDir = Path.Combine(catalogDir, "Structs");
-        var enumsDir = Path.Combine(catalogDir, "Enums");
+        var catalogDir = Path.Combine(outputDir, FolderCatalog);
+        var structsDir = Path.Combine(catalogDir, FolderStructures);
+        var enumsDir = Path.Combine(catalogDir, FolderEnums);
 
+        if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         Directory.CreateDirectory(structsDir);
         Directory.CreateDirectory(enumsDir);
 
@@ -26,21 +31,16 @@ public static class WikiCatalog
         var loadedCatalogs = new List<AssetCatalog>();
         foreach (var type in catalogTypes)
         {
-            try
-            {
-                var instance = (AssetCatalog)Activator.CreateInstance(type)!;
-                loadedCatalogs.Add(instance);
-            }
-            catch
-            {
-                Console.WriteLine($"[WikiGen] Warning: Could not instantiate catalog {type.Name}");
-            }
+            try { loadedCatalogs.Add((AssetCatalog)Activator.CreateInstance(type)!); }
+            catch { Console.WriteLine($"[WikiGen] Warning: Failed to instantiate {type.Name}"); }
         }
 
         BuildDependencyGraph(loadedCatalogs);
 
         int structCount = 0;
         int enumCount = 0;
+        var allStructs = new List<string>();
+        var allEnums = new List<string>();
 
         foreach (var catalog in loadedCatalogs)
         {
@@ -51,6 +51,7 @@ public static class WikiCatalog
 
                 var markdown = GenerateMarkdownForStruct(def);
                 File.WriteAllText(Path.Combine(structsDir, $"{def.Name}.md"), markdown);
+                allStructs.Add(def.Name);
                 structCount++;
             }
 
@@ -61,17 +62,50 @@ public static class WikiCatalog
 
                 var markdown = GenerateMarkdownForEnum(def);
                 File.WriteAllText(Path.Combine(enumsDir, $"{def.Name}.md"), markdown);
+                allEnums.Add(def.Name);
                 enumCount++;
             }
         }
 
-        Console.WriteLine($"[WikiGen] Completed! Generated {structCount} Structs and {enumCount} Enums.");
+        GenerateSidebar(outputDir, allStructs, allEnums);
+
+        Console.WriteLine($"[WikiGen] Done! {structCount} Structures, {enumCount} Enums.");
+    }
+
+    private static void GenerateSidebar(string outputDir, List<string> structs, List<string> enums)
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("* [[Home]]");
+        sb.AppendLine();
+
+        sb.AppendLine("### Catalog");
+
+        sb.AppendLine("<details open>");
+        sb.AppendLine($"<summary>Structures ({structs.Count})</summary>");
+        sb.AppendLine();
+        foreach (var s in structs.OrderBy(x => x))
+        {
+            sb.AppendLine($"* [{s}]({FolderCatalog}/{FolderStructures}/{s})");
+        }
+        sb.AppendLine("</details>");
+        sb.AppendLine();
+
+        sb.AppendLine("<details>");
+        sb.AppendLine($"<summary>Enums ({enums.Count})</summary>");
+        sb.AppendLine();
+        foreach (var e in enums.OrderBy(x => x))
+        {
+            sb.AppendLine($"* [{e}]({FolderCatalog}/{FolderEnums}/{e})");
+        }
+        sb.AppendLine("</details>");
+
+        File.WriteAllText(Path.Combine(outputDir, "_Sidebar.md"), sb.ToString());
     }
 
     private static void BuildDependencyGraph(List<AssetCatalog> catalogs)
     {
         _usagesMap.Clear();
-
         foreach (var catalog in catalogs)
         {
             foreach (var structName in catalog.StructNames)
@@ -81,31 +115,19 @@ public static class WikiCatalog
 
                 foreach (var field in definition.Fields)
                 {
-                    string? dependency = null;
-
-                    if (field.Type == DataType.Struct)
-                    {
-                        dependency = field.ElementType;
-                    }
-                    else if (field.Type == DataType.Enum)
-                    {
-                        dependency = field.EnumType;
-                    }
+                    string? dep = null;
+                    if (field.Type == DataType.Struct) dep = field.ElementType;
+                    else if (field.Type == DataType.Enum) dep = field.EnumType;
                     else if (field.Type == DataType.Array && field.ElementType != null)
                     {
-                        if (!Enum.TryParse<DataType>(field.ElementType, true, out _))
-                        {
-                            dependency = field.ElementType;
-                        }
+                         if (!Enum.TryParse<DataType>(field.ElementType, true, out _))
+                            dep = field.ElementType;
                     }
 
-                    if (dependency != null)
+                    if (dep != null)
                     {
-                        if (!_usagesMap.ContainsKey(dependency))
-                        {
-                            _usagesMap[dependency] = new HashSet<string>();
-                        }
-                        _usagesMap[dependency].Add(structName);
+                        if (!_usagesMap.ContainsKey(dep)) _usagesMap[dep] = new HashSet<string>();
+                        _usagesMap[dep].Add(structName);
                     }
                 }
             }
@@ -115,39 +137,31 @@ public static class WikiCatalog
     private static string GenerateMarkdownForStruct(StructDefinition def)
     {
         var sb = new StringBuilder();
-
         sb.AppendLine($"# {def.Name}");
         sb.AppendLine($"**Size:** `0x{def.Size:x}`");
         sb.AppendLine($"**Count:** `0x{def.Fields.Count:x}`");
         sb.AppendLine();
 
         sb.AppendLine("## Structure");
-        sb.AppendLine();
         sb.AppendLine("| Offset | DataType | Name |");
         sb.AppendLine("| :--- | :--- | :--- |");
 
         foreach (var field in def.Fields)
         {
-            string offsetHex = $"0x{field.Offset:X2}";
-            string typeStr = FormatDataType(field);
-            sb.AppendLine($"| `{offsetHex}` | {typeStr} | **{field.Name}** |");
+            sb.AppendLine($"| `0x{field.Offset:X2}` | {FormatDataType(field)} | **{field.Name}** |");
         }
         sb.AppendLine();
 
         AppendReferencesSection(sb, def.Name);
-
         return sb.ToString();
     }
 
     private static string GenerateMarkdownForEnum(EnumDefinition def)
     {
         var sb = new StringBuilder();
-
         sb.AppendLine($"# {def.Name}");
         sb.AppendLine();
-
         sb.AppendLine("## Values");
-        sb.AppendLine();
         sb.AppendLine("| Value | Name |");
         sb.AppendLine("| :--- | :--- |");
 
@@ -158,7 +172,6 @@ public static class WikiCatalog
         sb.AppendLine();
 
         AppendReferencesSection(sb, def.Name);
-
         return sb.ToString();
     }
 
@@ -168,12 +181,12 @@ public static class WikiCatalog
         {
             sb.AppendLine("---");
             sb.AppendLine("## Reference");
-            sb.AppendLine("> Used by the following types:");
+            sb.AppendLine("> Used by:");
             sb.AppendLine();
-
             foreach (var user in users.OrderBy(u => u))
             {
-                sb.AppendLine($"- [`{user}`](../Structs/{user})");
+                // Link relativo corrigido para apontar para Structures
+                sb.AppendLine($"- [`{user}`](../{FolderStructures}/{user})");
             }
             sb.AppendLine();
         }
@@ -183,32 +196,26 @@ public static class WikiCatalog
     {
         if (field.Type == DataType.Struct)
         {
-            var structName = field.ElementType ?? "UnknownStruct";
-            return $"[`{structName}`](../Structs/{structName})";
+            var name = field.ElementType ?? "Unknown";
+            // Link relativo corrigido
+            return $"[`{name}`](../{FolderStructures}/{name})";
         }
-
-        if (field.Type == DataType.Array)
-        {
-            var innerType = field.ElementType ?? "Unknown";
-            bool isPrimitive = Enum.TryParse<DataType>(innerType, true, out _);
-
-            if (!isPrimitive)
-            {
-                return $"`Array<`[`{innerType}`](../Structs/{innerType})`>`";
-            }
-            else
-            {
-                return $"`Array<{innerType.ToLower()}>`";
-            }
-        }
-
         if (field.Type == DataType.Enum)
         {
-            return field.EnumType != null
-               ? $"[`Enum<{field.EnumType}>`](../Enums/{field.EnumType})"
-               : "`Enum`";
+            var name = field.EnumType ?? "Unknown";
+            // Link relativo corrigido
+            return field.EnumType != null 
+                ? $"[`Enum<{name}>`](../{FolderEnums}/{name})" 
+                : "`Enum`";
         }
-
+        if (field.Type == DataType.Array)
+        {
+            var inner = field.ElementType ?? "Unknown";
+            bool isPrim = Enum.TryParse<DataType>(inner, true, out _);
+            if (!isPrim)
+                return $"`Array<`[`{inner}`](../{FolderStructures}/{inner})`>`";
+            return $"`Array<{inner.ToLower()}>`";
+        }
         return $"`{field.Type.ToString().ToLower()}`";
     }
 }
