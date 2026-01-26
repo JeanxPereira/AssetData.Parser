@@ -1,13 +1,19 @@
+using System.Text.RegularExpressions;
 using System.Xml;
 using ReCap.Parser;
+using ReCap.Parser.CLI.Commands;
 
 namespace ReCap.Parser.CLI;
 
 /// <summary>
 /// CLI for ReCap.Parser with DBPF support.
 /// </summary>
-public static class Program
+public static partial class Program
 {
+    // Pattern for catalog files: catalog_N.bin
+    [GeneratedRegex(@"^catalog_\d+$", RegexOptions.IgnoreCase)]
+    private static partial Regex CatalogPattern();
+    
     public static int Main(string[] args)
     {
         if (args.Length == 0)
@@ -15,7 +21,15 @@ public static class Program
             PrintUsage();
             return 1;
         }
-        
+
+        if (args.Length > 0 && args[0] == "wiki-gen")
+        {
+            string wikiOutputDir = args.Length > 1 ? args[1] : "./wiki-output";
+            WikiCatalog.Run(wikiOutputDir);
+            
+            return 0;
+        }
+
         // Parse arguments
         string? inputFile = null;
         string? dbpfPackage = null;
@@ -97,6 +111,33 @@ public static class Program
         }
     }
     
+    /// <summary>
+    /// Determine asset type from name, handling special patterns like catalog_N.bin
+    /// </summary>
+    private static (string baseName, string? typeName) ParseAssetName(string assetName)
+    {
+        // Remove .bin extension if present
+        var name = assetName.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) 
+            ? assetName[..^4] 
+            : assetName;
+        
+        // Check for catalog pattern: catalog_N -> Catalog type
+        if (CatalogPattern().IsMatch(name))
+        {
+            return (name, "Catalog");
+        }
+        
+        // Standard format: name.Type
+        var parts = name.Split('.', 2);
+        if (parts.Length > 1)
+        {
+            return (parts[0], parts[1]);
+        }
+        
+        // No type extension - return null for type
+        return (name, null);
+    }
+    
     private static int HandleDbpf(string dbpfPath, string? assetName, string? registryDir, 
         string? outputDir, bool verbose, bool listAssets, string? filterType)
     {
@@ -160,13 +201,14 @@ public static class Program
                 return 1;
             }
             
-            // Determine type from asset name
-            var parts = assetName.Split('.', 2);
-            var typeName = parts.Length > 1 ? parts[1] : null;
+            // Parse asset name to get type
+            var (baseName, typeName) = ParseAssetName(assetName);
             
             if (string.IsNullOrEmpty(typeName))
             {
                 Console.Error.WriteLine($"Error: Cannot determine asset type from name: {assetName}");
+                Console.Error.WriteLine($"       Try using the full name with extension (e.g., 'default.AffixTuning')");
+                Console.Error.WriteLine($"       Or for catalog files: 'catalog_131.bin' or 'catalog_131'");
                 return 1;
             }
             
@@ -188,7 +230,7 @@ public static class Program
             if (!string.IsNullOrEmpty(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
-                var outputPath = Path.Combine(outputDir, parts[0] + ".xml");
+                var outputPath = Path.Combine(outputDir, baseName + ".xml");
                 
                 var xml = AssetSerializer.ToXml(root);
                 var settings = new XmlWriterSettings { Indent = true };
@@ -206,7 +248,7 @@ public static class Program
         // No specific asset requested - just show info
         Console.WriteLine($"DBPF: {Path.GetFileName(dbpfPath)}");
         Console.WriteLine($"Entries: {dbpf.Entries.Count}");
-        Console.WriteLine("Use -l to list assets, or -a <name> to parse a specific asset.");
+        Console.WriteLine("Use -l to list assets, or -a <n> to parse a specific asset.");
         return 0;
     }
     
@@ -337,7 +379,7 @@ Single File Options:
 
 DBPF Package Options:
   -d, --dbpf <file>   DBPF/DBBF package file
-  -a, --asset <name>  Asset to extract (e.g., 'default.AffixTuning')
+  -a, --asset <n>     Asset to extract (e.g., 'default.AffixTuning', 'catalog_131.bin')
   -r, --registries    Registry directory for name resolution
   -l, --list          List all assets in package
   -t, --type <ext>    Filter by type extension (with -l)
@@ -351,6 +393,7 @@ Examples:");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l -t noun");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a default.AffixTuning -r registries -v");
+        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a catalog_131.bin -r registries -v");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a ZelemBoss.phase -r registries -o output/");
         Console.ResetColor();
     }

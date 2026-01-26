@@ -372,6 +372,7 @@ public sealed class AssetParser
         if (count > 1_000_000)
             throw new InvalidOperationException($"Array '{field.Name}' has invalid count: {count}");
 
+        // Check if element type is a struct
         if (_globalStructs.TryGetValue(field.ElementType!, out var elementStructDef))
         {
             int arrayStart = _blob.ReserveArray(elementStructDef.Size, count);
@@ -388,37 +389,59 @@ public sealed class AssetParser
                 ParseStruct(entry, elementStructDef, elemOffset);
                 arrayNode.AddChild(entry);
             }
+            return arrayNode;
         }
-        else
+        
+        // Must be a primitive or dynamic type
+        if (!Enum.TryParse<DataType>(field.ElementType, true, out var elemType))
+            throw new InvalidOperationException($"Unknown element type: {field.ElementType}");
+        
+        // Handle dynamic types (strings) - each has a 4-byte indicator in the header array
+        if (elemType.IsDynamic())
         {
-            if (!Enum.TryParse<DataType>(field.ElementType, true, out var elemType))
-                throw new InvalidOperationException($"Unknown element type: {field.ElementType}");
-            
-            int elementSize = GetPrimitiveSize(elemType);
-            int arrayStart = _blob.ReserveArray(elementSize, count);
+            // Reserve space for indicator array (4 bytes per element)
+            int indicatorStart = _blob.ReserveArray(4, count);
             
             for (int i = 0; i < count; i++)
             {
-                AssetNode entry;
+                int indicatorOffset = indicatorStart + (i * 4);
+                uint indicator = ReadUInt32(indicatorOffset);
                 
-                if (elemType.IsDynamic())
+                AssetNode entry;
+                if (indicator != 0)
                 {
                     entry = new StringNode
                     {
                         Name = $"[{i}]",
                         Value = _blob.ReadString(),
-                        NodeKind = AssetNodeKind.String,
-                        BinaryOffset = _blob.Position
+                        NodeKind = elemType == DataType.Asset ? AssetNodeKind.Asset : AssetNodeKind.String,
+                        BinaryOffset = indicatorOffset
                     };
                 }
                 else
                 {
-                    int elemOffset = arrayStart + (i * elementSize);
-                    entry = CreatePrimitiveNode($"[{i}]", elemType, elemOffset, field.EnumType);
+                    entry = new StringNode
+                    {
+                        Name = $"[{i}]",
+                        Value = "",
+                        NodeKind = AssetNodeKind.String,
+                        BinaryOffset = indicatorOffset
+                    };
                 }
-                
                 arrayNode.AddChild(entry);
             }
+            return arrayNode;
+        }
+        
+        // Handle primitive types
+        int elementSize = GetPrimitiveSize(elemType);
+        int arrayStart2 = _blob.ReserveArray(elementSize, count);
+        
+        for (int i = 0; i < count; i++)
+        {
+            int elemOffset = arrayStart2 + (i * elementSize);
+            var entry = CreatePrimitiveNode($"[{i}]", elemType, elemOffset, field.EnumType);
+            arrayNode.AddChild(entry);
         }
         
         return arrayNode;

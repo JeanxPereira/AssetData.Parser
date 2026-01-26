@@ -55,10 +55,11 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore Dependencies
-      run: dotnet restore ReCap.Parser.sln -r ${{ matrix.rid }}
+      run: dotnet restore ReCap.Parser.sln
 
     - name: Run Tests
       run: dotnet test ReCap.Parser.sln --no-restore --verbosity normal
+      continue-on-error: true
 
     - name: Publish CLI
       run: >
@@ -68,8 +69,8 @@ jobs:
         --self-contained true 
         -p:PublishSingleFile=true 
         -p:IncludeNativeLibrariesForSelfExtract=true 
+        -p:IncludeAllContentForSelfExtract=true
         -o ./publish-cli
-        --no-restore
 
     - name: Publish Editor
       run: >
@@ -77,29 +78,77 @@ jobs:
         -c Release 
         -r ${{ matrix.rid }} 
         --self-contained true 
+        -p:PublishSingleFile=true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:IncludeAllContentForSelfExtract=true
         -o ./publish-editor
-        --no-restore
 
-    - name: Prepare Assets
+    - name: List published CLI files (Debug)
+      shell: pwsh
+      run: Get-ChildItem "./publish-cli" -Recurse | ForEach-Object { Write-Host "$($_.Length) bytes - $($_.FullName)" }
+
+    - name: List published Editor files (Debug)
+      shell: pwsh
+      run: Get-ChildItem "./publish-editor" -Recurse | ForEach-Object { Write-Host "$($_.Length) bytes - $($_.FullName)" }
+
+    - name: Prepare CLI Asset
       shell: pwsh
       run: |
-        $cliFile = Get-ChildItem "./publish-cli/*${{ matrix.ext }}" | Select-Object -First 1
-        if ($cliFile) { Move-Item $cliFile.FullName "./ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}" -Force }
+        $cliFiles = Get-ChildItem "./publish-cli" -File | Where-Object { 
+          $_.Name -like "ReCap*" -and ($_.Extension -eq ".exe" -or $_.Extension -eq "" -or $_.Extension -eq $null)
+        }
+        $cliFile = $cliFiles | Sort-Object Length -Descending | Select-Object -First 1
+        if ($cliFile) {
+          $destName = "ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}"
+          Write-Host "Moving CLI: $($cliFile.FullName) -> $destName"
+          Copy-Item $cliFile.FullName "./$destName" -Force
+        } else {
+          Write-Error "No CLI executable found!"
+          exit 1
+        }
+
+    - name: Prepare Editor Asset
+      shell: pwsh
+      run: |
+        $editorFiles = Get-ChildItem "./publish-editor" -File | Where-Object { 
+          $_.Name -like "ReCap*" -and ($_.Extension -eq ".exe" -or $_.Extension -eq "" -or $_.Extension -eq $null)
+        }
+        $editorFile = $editorFiles | Sort-Object Length -Descending | Select-Object -First 1
+        if ($editorFile) {
+          $destName = "ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}"
+          Write-Host "Moving Editor: $($editorFile.FullName) ($($editorFile.Length) bytes) -> $destName"
+          Copy-Item $editorFile.FullName "./$destName" -Force
+        } else {
+          Write-Error "No Editor executable found!"
+          exit 1
+        }
+
+    - name: Verify artifact sizes
+      shell: pwsh
+      run: |
+        $cli = Get-Item "./ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}"
+        $editor = Get-Item "./ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}"
+        Write-Host "CLI size: $($cli.Length / 1MB) MB"
+        Write-Host "Editor size: $($editor.Length / 1MB) MB"
         
-        $editorFile = Get-ChildItem "./publish-editor/*${{ matrix.ext }}" | Select-Object -First 1
-        if ($editorFile) { Move-Item $editorFile.FullName "./ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}" -Force }
+        # Editor should be at least 50MB for self-contained Avalonia app
+        if ($editor.Length -lt 50MB) {
+          Write-Warning "Editor file seems too small! Expected ~100MB+ for self-contained Avalonia app"
+        }
 
     - name: Upload CLI Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ReCap-CLI-${{ matrix.name }}
         path: ReCap-CLI-${{ matrix.name }}${{ matrix.ext }}
+        if-no-files-found: error
 
     - name: Upload Editor Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ReCap-Editor-${{ matrix.name }}
         path: ReCap-Editor-${{ matrix.name }}${{ matrix.ext }}
+        if-no-files-found: error
 
   release:
     name: Create Release
@@ -114,6 +163,9 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

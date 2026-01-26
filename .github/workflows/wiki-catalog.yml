@@ -1,0 +1,56 @@
+name: Update Wiki
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/Core/Catalog/**'
+      - 'src/Core/TypeSystem.cs'
+      - 'src/CLI/Commands/WikiCatalog.cs'
+      - '.github/workflows/update-wiki.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-wiki:
+    name: Sync Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Checkout Wiki Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki_content
+          token: ${{ secrets.WIKI_ACTION_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build CLI
+        run: dotnet build src/CLI/ReCap.Parser.CLI.csproj -c Release
+
+      - name: Run Wiki Generator
+        run: |
+          dotnet run --project src/CLI/ReCap.Parser.CLI.csproj -c Release -- wiki-gen wiki_content
+
+      - name: Push Changes
+        working-directory: wiki_content
+        run: |
+          git config user.name "ReCap Bot"
+          git config user.email "bot@recap-parser.com"
+          
+          git add .
+          
+          if ! git diff-index --quiet HEAD; then
+            echo "Changes detected. Pushing to Wiki..."
+            git commit -m "Auto-update: Catalog Reference"
+            git push
+          else
+            echo "No changes detected. Skipping push to save resources."
+          fi
