@@ -36,8 +36,6 @@ public static class WikiCatalog
 
         BuildDependencyGraph(loadedCatalogs);
 
-        int structCount = 0;
-        int enumCount = 0;
         var allStructs = new List<string>();
         var allEnums = new List<string>();
 
@@ -47,49 +45,41 @@ public static class WikiCatalog
             {
                 var def = catalog.GetStruct(structName);
                 if (def == null) continue;
-
                 var markdown = GenerateMarkdownForStruct(def);
                 File.WriteAllText(Path.Combine(structsDir, $"{def.Name}.md"), markdown);
                 allStructs.Add(def.Name);
-                structCount++;
             }
 
             foreach (var enumName in catalog.EnumNames)
             {
                 var def = catalog.GetEnum(enumName);
                 if (def == null) continue;
-
                 var markdown = GenerateMarkdownForEnum(def);
                 File.WriteAllText(Path.Combine(enumsDir, $"{def.Name}.md"), markdown);
                 allEnums.Add(def.Name);
-                enumCount++;
             }
         }
 
         GenerateSidebar(outputDir, allStructs, allEnums);
-
-        Console.WriteLine($"[WikiGen] Done! {structCount} Structures, {enumCount} Enums.");
+        Console.WriteLine($"[WikiGen] Done! {allStructs.Count} Structures, {allEnums.Count} Enums.");
     }
 
     private static void GenerateSidebar(string outputDir, List<string> structs, List<string> enums)
     {
         var sb = new StringBuilder();
         
-        sb.AppendLine("* [[Home]]");
+        sb.AppendLine("## Base");
+        sb.AppendLine("* **[Home](https://github.com/JeanxPereira/ReCap.Parser/wiki/Home )**");
         sb.AppendLine();
 
-        sb.AppendLine("### API Reference");
-        sb.AppendLine();
-        
-        sb.AppendLine("* [[Catalog]]");
+        sb.AppendLine("## Catalog Assets");
         
         sb.AppendLine("  * **Structures**");
         foreach (var s in structs.OrderBy(x => x))
         {
             sb.AppendLine($"    * [[{s}]]");
         }
-        sb.AppendLine();
-
+        
         sb.AppendLine("  * **Enums**");
         foreach (var e in enums.OrderBy(x => x))
         {
@@ -204,11 +194,13 @@ public static class WikiCatalog
         if (field.Type == DataType.Array)
         {
             var inner = field.ElementType ?? "Unknown";
-            bool isPrim = Enum.TryParse<DataType>(inner, true, out _);
-            if (!isPrim)
-                return $"`Array(`[[`{inner}`|{inner}]]`)`";
-            return $"`Array<{inner}>`";
+            bool isComplexType = !Enum.TryParse<DataType>(inner, true, out _);
+            
+            if (isComplexType)
+                return $"`Array<`[[`{inner}`|{inner}]]`>`";
+            else
+                return $"`Array<{inner.ToLower()}>`";
         }
-        return $"`{field.Type.ToString()}`";
+        return $"`{field.Type.ToString().ToLower()}`";
     }
 }
