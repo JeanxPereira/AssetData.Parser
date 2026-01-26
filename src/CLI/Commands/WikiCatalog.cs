@@ -124,13 +124,13 @@ public static class WikiCatalog
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# {def.Name}");
-        sb.AppendLine($"**Size:** `0x{def.Size:x}`");
-        sb.AppendLine($"**Count:** `0x{def.Fields.Count:x}`");
+        sb.AppendLine($"**Size:** `0x{def.Size:X}`");
+        sb.AppendLine($"**Count:** `0x{def.Fields.Count:X}`");
         sb.AppendLine();
 
         sb.AppendLine("## Structure");
         sb.AppendLine("| Offset | DataType | Name |");
-        sb.AppendLine("| :--- | :--- | :--- |");
+        sb.AppendLine("| :-: | :- | :- |");
 
         foreach (var field in def.Fields)
         {
@@ -149,7 +149,7 @@ public static class WikiCatalog
         sb.AppendLine();
         sb.AppendLine("## Values");
         sb.AppendLine("| Value | Name |");
-        sb.AppendLine("| :--- | :--- |");
+        sb.AppendLine("| :-: | :- |");
 
         foreach (var kvp in def.Values.OrderBy(x => x.Key))
         {
@@ -165,13 +165,11 @@ public static class WikiCatalog
     {
         if (_usagesMap.TryGetValue(typeName, out var users) && users.Count > 0)
         {
-            sb.AppendLine("---");
-            sb.AppendLine("## Reference");
+            sb.AppendLine("> ### Reference");
             sb.AppendLine("> Used by:");
-            sb.AppendLine();
             foreach (var user in users.OrderBy(u => u))
             {
-                sb.AppendLine($"- [`{user}`]({user})");
+                sb.AppendLine($"> [`{user}`]({user})");
             }
             sb.AppendLine();
         }
@@ -182,25 +180,30 @@ public static class WikiCatalog
         if (field.Type == DataType.Struct)
         {
             var name = field.ElementType ?? "Unknown";
-            return $"[`{name}`]({name})";
+            return $"[`({name})`]({name})";
         }
+
         if (field.Type == DataType.Enum)
         {
             var name = field.EnumType ?? "Unknown";
-            return field.EnumType != null 
-                ? $"`Enum<`[`{name}`]({name})`>`"
-                : "`Enum`";
+            return $"`Enum` [`({name})`]({name})";
         }
+
         if (field.Type == DataType.Array)
         {
             var inner = field.ElementType ?? "Unknown";
             bool isComplexType = !Enum.TryParse<DataType>(inner, true, out _);
             
             if (isComplexType)
-                return $"`Array<`[`{inner}`]({inner})`>`";
+            {
+                return $"`Array` [`({inner})`]({inner})";
+            }
             else
-                return $"`Array<{inner.ToLower()}>`";
+            {
+                return $"`Array` `({inner})`";
+            }
         }
-        return $"`{field.Type.ToString().ToLower()}`";
+
+        return $"`{field.Type.ToString()}`";
     }
 }
