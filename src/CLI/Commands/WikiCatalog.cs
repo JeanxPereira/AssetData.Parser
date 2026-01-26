@@ -6,7 +6,6 @@ namespace ReCap.Parser.CLI.Commands;
 public static class WikiCatalog
 {
     private static readonly Dictionary<string, HashSet<string>> _usagesMap = new();
-
     private const string FolderStructures = "Structures";
     private const string FolderEnums = "Enums";
     private const string FolderCatalog = "Catalog";
@@ -81,7 +80,7 @@ public static class WikiCatalog
 
         sb.AppendLine("### API Reference");
         sb.AppendLine();
-
+        
         sb.AppendLine("* [[Catalog]]");
         
         sb.AppendLine("  * **Structures**");
@@ -182,7 +181,7 @@ public static class WikiCatalog
             sb.AppendLine();
             foreach (var user in users.OrderBy(u => u))
             {
-                sb.AppendLine($"- [[`{user}`]]");
+                sb.AppendLine($"- [[`{user}`|{user}]]");
             }
             sb.AppendLine();
         }
@@ -193,13 +192,13 @@ public static class WikiCatalog
         if (field.Type == DataType.Struct)
         {
             var name = field.ElementType ?? "Unknown";
-            return $"[[`{name}`]]";
+            return $"[[`{name}`|{name}]]";
         }
         if (field.Type == DataType.Enum)
         {
             var name = field.EnumType ?? "Unknown";
             return field.EnumType != null 
-                ? $"`Enum<`[[`{name}`]]`>`"
+                ? $"`Enum<`[[`{name}`|{name}]]`>`"
                 : "`Enum`";
         }
         if (field.Type == DataType.Array)
@@ -207,9 +206,9 @@ public static class WikiCatalog
             var inner = field.ElementType ?? "Unknown";
             bool isPrim = Enum.TryParse<DataType>(inner, true, out _);
             if (!isPrim)
-                return $"`Array<`[[`{inner}`]]`>`";
-            return $"`Array<{inner.ToLower()}>`";
+                return $"`Array(`[[`{inner}`|{inner}]]`)`";
+            return $"`Array<{inner}>`";
         }
-        return $"`{field.Type.ToString().ToLower()}`";
+        return $"`{field.Type.ToString()}`";
     }
 }
