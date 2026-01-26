@@ -79,26 +79,23 @@ public static class WikiCatalog
         sb.AppendLine("* [[Home]]");
         sb.AppendLine();
 
-        sb.AppendLine("### Catalog");
-
-        sb.AppendLine("<details open>");
-        sb.AppendLine($"<summary>Structures ({structs.Count})</summary>");
+        sb.AppendLine("### API Reference");
         sb.AppendLine();
+
+        sb.AppendLine("* [[Catalog]]");
+        
+        sb.AppendLine("  * **Structures**");
         foreach (var s in structs.OrderBy(x => x))
         {
-            sb.AppendLine($"* [{s}]({FolderCatalog}/{FolderStructures}/{s})");
+            sb.AppendLine($"    * [[{s}]]");
         }
-        sb.AppendLine("</details>");
         sb.AppendLine();
 
-        sb.AppendLine("<details>");
-        sb.AppendLine($"<summary>Enums ({enums.Count})</summary>");
-        sb.AppendLine();
+        sb.AppendLine("  * **Enums**");
         foreach (var e in enums.OrderBy(x => x))
         {
-            sb.AppendLine($"* [{e}]({FolderCatalog}/{FolderEnums}/{e})");
+            sb.AppendLine($"    * [[{e}]]");
         }
-        sb.AppendLine("</details>");
 
         File.WriteAllText(Path.Combine(outputDir, "_Sidebar.md"), sb.ToString());
     }
@@ -185,7 +182,7 @@ public static class WikiCatalog
             sb.AppendLine();
             foreach (var user in users.OrderBy(u => u))
             {
-                sb.AppendLine($"- [`{user}`]({FolderCatalog}/{FolderStructures}/{user})");
+                sb.AppendLine($"- [[`{user}`]]");
             }
             sb.AppendLine();
         }
@@ -196,13 +193,13 @@ public static class WikiCatalog
         if (field.Type == DataType.Struct)
         {
             var name = field.ElementType ?? "Unknown";
-            return $"[`{name}`]({FolderCatalog}/{FolderStructures}/{name})";
+            return $"[[`{name}`]]";
         }
         if (field.Type == DataType.Enum)
         {
             var name = field.EnumType ?? "Unknown";
             return field.EnumType != null 
-                ? $"[`Enum<{name}>`]({FolderCatalog}/{FolderEnums}/{name})"
+                ? $"`Enum<`[[`{name}`]]`>`"
                 : "`Enum`";
         }
         if (field.Type == DataType.Array)
@@ -210,7 +207,7 @@ public static class WikiCatalog
             var inner = field.ElementType ?? "Unknown";
             bool isPrim = Enum.TryParse<DataType>(inner, true, out _);
             if (!isPrim)
-                return $"`Array<`[`{inner}`]({FolderCatalog}/{FolderStructures}/{inner})`>`";
+                return $"`Array<`[[`{inner}`]]`>`";
             return $"`Array<{inner.ToLower()}>`";
         }
         return $"`{field.Type.ToString().ToLower()}`";
