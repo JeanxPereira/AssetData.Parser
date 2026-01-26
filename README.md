@@ -9,6 +9,9 @@
 
 ```mermaid
 flowchart TB
+    %% Paleta Refinada (Inspirada na Logo e CommonUI)
+    %% Accent: #378FB6 | Glow: #5BDEF3 | Dark: #0A121D | Border: #40FFFFFF
+
     subgraph Editor ["Editor (MVVM)"]
         direction TB
         subgraph TopLayer [Logic Layer]
@@ -38,30 +41,49 @@ flowchart TB
     end
 
     AssetSvc -- "Direct API Call" --> Logic
+
+    %% Estilização Premium para Dark Mode
+    %% Editor: Azul Profundo (SystemAccentColorDark2)
+    style Editor fill:#1F536B,stroke:#5BDEF3,stroke-width:2px,color:#FFFFFF
+    
+    %% Core: Fundo ListBoxItem (Escuro/Sóbrio)
+    style Core fill:#0A121D,stroke:#378FB6,stroke-width:2px,color:#FFFFFF
+    
+    %% Camadas Internas: Tons Médios para contraste
+    style TopLayer fill:#2B7291,stroke:#93F5FF,color:#FFFFFF
+    style Logic fill:#151819,stroke:#378FB6,color:#FFFFFF
+
+    %% Links e Textos
+    linkStyle default stroke:#5BDEF3,stroke-width:1px
 ```
 
 ## Key Changes
 
-### Before
+### Before (Legacy Process)
 ```mermaid
 flowchart LR
     Bin[Binary Asset] --> CLI["Core CLI<br/>(Process)"]
     CLI --> XML[XML File]
     XML --> Ed[Editor Reads XML]
     Ed --> Nodes[Nodes]
-    style CLI fill:#f9f,stroke:#333
-    style XML fill:#f9f,stroke:#333
+    
+    %% Estilo "Desativado" usando as cores de TextBox/Disabled do seu código
+    style CLI fill:#252829,stroke:#51FFFFFF,stroke-dasharray: 5 5,color:#99999A
+    style XML fill:#252829,stroke:#51FFFFFF,stroke-dasharray: 5 5,color:#99999A
+    linkStyle 1,2,3 stroke:#2F3031,stroke-width:1px
 ```
 
-### After
+### After (Optimized API)
 ```mermaid
 flowchart LR
     Bin[Binary Asset] --> API["Core API<br/>(Direct)"]
     API --> Nodes["AssetNode<br/>(Direct Binding)"]
-    style API fill:#9f9,stroke:#333
-    style Nodes fill:#9f9,stroke:#333
+    
+    %% Estilo "Ativo/Glow" baseado na Logo
+    style API fill:#378FB6,stroke:#93F5FF,stroke-width:3px,color:#FFFFFF
+    style Nodes fill:#378FB6,stroke:#93F5FF,stroke-width:3px,color:#FFFFFF
+    linkStyle 0,1 stroke:#5BDEF3,stroke-width:2px
 ```
-
 ## Technologies
 
 - **.NET 9** - Latest stable version
