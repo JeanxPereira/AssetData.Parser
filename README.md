@@ -37,7 +37,7 @@ flowchart TB
         Logic --> Tree
     end
 
-    AssetSvc -- "Direct API Call (No XML!)" --> Logic
+    AssetSvc -- "Direct API Call" --> Logic
 ```
 
 ## Key Changes
