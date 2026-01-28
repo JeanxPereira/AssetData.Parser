@@ -40,6 +40,7 @@ public static partial class Program
         bool verbose = false;
         bool listAssets = false;
         string? filterType = null;
+        int? randomSeed = null;
         
         for (int i = 0; i < args.Length; i++)
         {
@@ -74,6 +75,10 @@ public static partial class Program
                     if (i + 1 < args.Length)
                         filterType = args[++i];
                     break;
+                case "--seed":
+                    if (i + 1 < args.Length)
+                        randomSeed = int.Parse(args[++i]);
+                    break;
                 case "-h" or "--help":
                     PrintUsage();
                     return 0;
@@ -89,7 +94,8 @@ public static partial class Program
             // Mode 1: DBPF package
             if (!string.IsNullOrEmpty(dbpfPackage))
             {
-                return HandleDbpf(dbpfPackage, assetName, registryDir, outputDir, verbose, listAssets, filterType);
+                return HandleDbpf(dbpfPackage, assetName, registryDir, outputDir, verbose, 
+                    listAssets, filterType, randomSeed);
             }
             
             // Mode 2: Single file
@@ -112,6 +118,132 @@ public static partial class Program
     }
     
     /// <summary>
+    /// Parse random asset specification: random:Type:Count
+    /// </summary>
+    private static (bool isRandom, string? type, int count) ParseRandomSpec(string assetArg)
+    {
+        if (!assetArg.StartsWith("random:", StringComparison.OrdinalIgnoreCase))
+            return (false, null, 1);
+        
+        var parts = assetArg.Split(':', StringSplitOptions.RemoveEmptyEntries);
+        
+        // random: → any type, count 1
+        if (parts.Length == 1)
+            return (true, null, 1);
+        
+        // random:Phase → Phase type, count 1
+        // random:* → any type, count 1
+        if (parts.Length == 2)
+        {
+            var type = parts[1] == "*" ? null : parts[1];
+            return (true, type, 1);
+        }
+        
+        // random:Phase:5 → Phase type, count 5
+        // random:*:5 → any type, count 5
+        if (parts.Length == 3)
+        {
+            var type = parts[1] == "*" ? null : parts[1];
+            var count = int.Parse(parts[2]);
+            return (true, type, count);
+        }
+        
+        throw new ArgumentException($"Invalid random specification: {assetArg}");
+    }
+    
+    /// <summary>
+    /// Get random assets from catalog
+    /// </summary>
+    private static List<string> GetRandomAssets(DbpfReader dbpf, AssetService service, 
+        string? typeFilter, int count, int? seed)
+    {
+        // Find catalog file
+        byte[]? catalogData = null;
+        
+        for (int i = 131; i <= 150; i++)
+        {
+            var testName = $"catalog_{i}.bin";
+            var data = dbpf.GetAsset(testName);
+            if (data != null && data.Length > 0)
+            {
+                catalogData = data;
+                break;
+            }
+        }
+        
+        if (catalogData == null)
+        {
+            var data = dbpf.GetAsset("catalog_0.bin");
+            if (data != null && data.Length > 0)
+                catalogData = data;
+        }
+        
+        if (catalogData == null)
+            throw new InvalidOperationException("No catalog found in package. Cannot select random assets.");
+        
+        // Parse catalog
+        var catalogRoot = service.Parser.Parse(catalogData, "Catalog", 8);
+        var entriesArray = catalogRoot.Children
+            .OfType<ArrayNode>()
+            .FirstOrDefault(n => n.Name == "entries");
+        
+        if (entriesArray == null)
+            throw new InvalidOperationException("Invalid catalog structure.");
+        
+        // Extract asset names
+        var assetNames = new List<string>();
+        
+        foreach (var entryNode in entriesArray.Children.OfType<StructNode>())
+        {
+            var nameNode = entryNode.Children
+                .OfType<StringNode>()
+                .FirstOrDefault(n => n.Name == "assetNameWType");
+            
+            if (nameNode == null || string.IsNullOrWhiteSpace(nameNode.Value))
+                continue;
+            
+            // Apply type filter if specified
+            if (!string.IsNullOrEmpty(typeFilter))
+            {
+                var parts = nameNode.Value.Split('.', 2);
+                if (parts.Length < 2 || !parts[1].Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+                    continue;
+            }
+            
+            assetNames.Add(nameNode.Value);
+        }
+        
+        if (assetNames.Count == 0)
+        {
+            var filterMsg = string.IsNullOrEmpty(typeFilter) ? "any type" : $"type '{typeFilter}'";
+            throw new InvalidOperationException($"No assets found with {filterMsg}.");
+        }
+        
+        // Select random assets
+        var random = seed.HasValue ? new Random(seed.Value) : new Random();
+        var selected = new List<string>();
+        
+        // If requesting more than available, just return all (shuffled)
+        if (count >= assetNames.Count)
+        {
+            selected = assetNames.OrderBy(_ => random.Next()).ToList();
+        }
+        else
+        {
+            // Select without replacement
+            var indices = Enumerable.Range(0, assetNames.Count).ToList();
+            for (int i = 0; i < count; i++)
+            {
+                var idx = random.Next(indices.Count);
+                selected.Add(assetNames[indices[idx]]);
+                indices.RemoveAt(idx);
+            }
+        }
+        
+        return selected;
+    }
+    
+    /// <summary>
     /// Determine asset type from name, handling special patterns like catalog_N.bin
     /// </summary>
     private static (string baseName, string? typeName) ParseAssetName(string assetName)
@@ -121,7 +253,7 @@ public static partial class Program
             ? assetName[..^4] 
             : assetName;
         
-        // Check for catalog pattern: catalog_N -> Catalog type
+        // Check for catalog pattern: catalog_N → Catalog type
         if (CatalogPattern().IsMatch(name))
         {
             return (name, "Catalog");
@@ -139,7 +271,7 @@ public static partial class Program
     }
     
     private static int HandleDbpf(string dbpfPath, string? assetName, string? registryDir, 
-        string? outputDir, bool verbose, bool listAssets, string? filterType)
+        string? outputDir, bool verbose, bool listAssets, string? filterType, int? randomSeed)
     {
         if (!File.Exists(dbpfPath))
         {
@@ -191,64 +323,142 @@ public static partial class Program
             return 0;
         }
         
-        // Mode: Extract and parse specific asset
+        // Mode: Parse specific asset(s)
         if (!string.IsNullOrEmpty(assetName))
         {
-            var data = dbpf.GetAsset(assetName);
-            if (data == null)
+            // Check for random specification
+            var (isRandom, typeFilter, count) = ParseRandomSpec(assetName);
+            
+            if (isRandom)
             {
-                Console.Error.WriteLine($"Error: Asset not found: {assetName}");
-                return 1;
-            }
-            
-            // Parse asset name to get type
-            var (baseName, typeName) = ParseAssetName(assetName);
-            
-            if (string.IsNullOrEmpty(typeName))
-            {
-                Console.Error.WriteLine($"Error: Cannot determine asset type from name: {assetName}");
-                Console.Error.WriteLine($"       Try using the full name with extension (e.g., 'default.AffixTuning')");
-                Console.Error.WriteLine($"       Or for catalog files: 'catalog_131.bin' or 'catalog_131'");
-                return 1;
-            }
-            
-            var service = new AssetService();
-            var fileType = service.GetFileType(typeName);
-            
-            if (fileType == null)
-            {
-                Console.Error.WriteLine($"Error: Unknown asset type: {typeName}");
-                return 1;
-            }
-            
-            var root = service.Parser.Parse(data, fileType.RootStruct, fileType.HeaderSize);
-            
-            if (verbose)
-                PrintTree(root, 0);
-            
-            // Output XML if requested
-            if (!string.IsNullOrEmpty(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-                var outputPath = Path.Combine(outputDir, baseName + ".xml");
+                // Random mode
+                var service = new AssetService();
+                var randomAssets = GetRandomAssets(dbpf, service, typeFilter, count, randomSeed);
                 
-                var xml = AssetSerializer.ToXml(root);
-                var settings = new XmlWriterSettings { Indent = true };
-                using var writer = XmlWriter.Create(outputPath, settings);
-                xml.WriteTo(writer);
+                if (verbose)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    var typeMsg = string.IsNullOrEmpty(typeFilter) ? "any type" : $"type '{typeFilter}'";
+                    var seedMsg = randomSeed.HasValue ? $" (seed: {randomSeed})" : "";
+                    Console.WriteLine($">>> Selected {randomAssets.Count} random asset(s) of {typeMsg}{seedMsg}");
+                    Console.ResetColor();
+                    Console.WriteLine();
+                }
                 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"    {assetName} -> {Path.GetFileName(outputPath)}");
-                Console.ResetColor();
+                // Process each random asset
+                int successCount = 0;
+                int failCount = 0;
+                
+                foreach (var randomAsset in randomAssets)
+                {
+                    try
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"=== Processing: {randomAsset} ===");
+                        Console.ResetColor();
+                        
+                        var result = ProcessSingleAsset(dbpf, randomAsset, registryDir, outputDir, verbose);
+                        if (result == 0)
+                            successCount++;
+                        else
+                            failCount++;
+                        
+                        if (randomAssets.Count > 1)
+                            Console.WriteLine(); // Separator between assets
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Error processing {randomAsset}: {ex.Message}");
+                        Console.ResetColor();
+                        failCount++;
+                    }
+                }
+                
+                // Summary
+                if (randomAssets.Count > 1)
+                {
+                    Console.WriteLine();
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"=== Summary ===");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Success: {successCount}");
+                    if (failCount > 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Failed: {failCount}");
+                    }
+                    Console.ResetColor();
+                }
+                
+                return failCount > 0 ? 1 : 0;
             }
-            
-            return 0;
+            else
+            {
+                // Specific asset mode
+                return ProcessSingleAsset(dbpf, assetName, registryDir, outputDir, verbose);
+            }
         }
         
         // No specific asset requested - just show info
         Console.WriteLine($"DBPF: {Path.GetFileName(dbpfPath)}");
         Console.WriteLine($"Entries: {dbpf.Entries.Count}");
         Console.WriteLine("Use -l to list assets, or -a <n> to parse a specific asset.");
+        Console.WriteLine("Use -a random:Type to parse a random asset of that type.");
+        return 0;
+    }
+    
+    private static int ProcessSingleAsset(DbpfReader dbpf, string assetName, 
+        string? registryDir, string? outputDir, bool verbose)
+    {
+        var data = dbpf.GetAsset(assetName);
+        if (data == null)
+        {
+            Console.Error.WriteLine($"Error: Asset not found: {assetName}");
+            return 1;
+        }
+        
+        // Parse asset name to get type
+        var (baseName, typeName) = ParseAssetName(assetName);
+        
+        if (string.IsNullOrEmpty(typeName))
+        {
+            Console.Error.WriteLine($"Error: Cannot determine asset type from name: {assetName}");
+            Console.Error.WriteLine($"       Try using the full name with extension (e.g., 'default.AffixTuning')");
+            Console.Error.WriteLine($"       Or for catalog files: 'catalog_131.bin' or 'catalog_131'");
+            return 1;
+        }
+        
+        var service = new AssetService();
+        var fileType = service.GetFileType(typeName);
+        
+        if (fileType == null)
+        {
+            Console.Error.WriteLine($"Error: Unknown asset type: {typeName}");
+            return 1;
+        }
+        
+        var root = service.Parser.Parse(data, fileType.RootStruct, fileType.HeaderSize);
+        
+        if (verbose)
+            PrintTree(root, 0);
+        
+        // Output XML if requested
+        if (!string.IsNullOrEmpty(outputDir))
+        {
+            Directory.CreateDirectory(outputDir);
+            var outputPath = Path.Combine(outputDir, baseName + ".xml");
+            
+            var xml = AssetSerializer.ToXml(root);
+            var settings = new XmlWriterSettings { Indent = true };
+            using var writer = XmlWriter.Create(outputPath, settings);
+            xml.WriteTo(writer);
+            
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"    {assetName} -> {Path.GetFileName(outputPath)}");
+            Console.ResetColor();
+        }
+        
         return 0;
     }
     
@@ -466,21 +676,36 @@ Single File Options:
 DBPF Package Options:
   -d, --dbpf <file>   DBPF/DBBF package file
   -a, --asset <n>     Asset to extract (e.g., 'default.AffixTuning', 'catalog_131.bin')
+                      Or use 'random:Type' for random selection:
+                        random:Phase      - 1 random Phase
+                        random:Phase:5    - 5 random Phases
+                        random:*          - 1 random asset (any type)
+                        random:*:10       - 10 random assets
   -r, --registries    Registry directory for name resolution
   -l, --list          List all assets in package
   -t, --type <ext>    Filter by type extension (with -l)
   -o <dir>            Output directory for XML
   -v, --verbose       Show parsed tree
+  --seed <n>          Random seed for reproducible selection
 
 Examples:");
         
         Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine("  # Parse single file");
         Console.WriteLine("  ReCap.Parser creature.noun --xml -o output/");
+        Console.WriteLine();
+        Console.WriteLine("  # List assets in package");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l -t noun");
+        Console.WriteLine();
+        Console.WriteLine("  # Parse specific asset");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a default.AffixTuning -r registries -v");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a catalog_131.bin -r registries -v");
         Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a ZelemBoss.phase -r registries -o output/");
+        Console.WriteLine();
+        Console.WriteLine("  # Random asset selection");
+        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:Phase -r registries -v");
+        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:Noun:5 -r registries");
+        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:*:3 -r registries --seed 42");
         Console.ResetColor();
     }
 }
