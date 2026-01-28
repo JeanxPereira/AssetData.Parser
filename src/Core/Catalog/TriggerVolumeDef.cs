@@ -12,7 +12,7 @@ public sealed class TriggerVolumeDef : AssetCatalog
             Field("useGameObjectDimensions", DataType.Bool, 52),
             Field("isKinematic", DataType.Bool, 53),
             EnumField("shape", "TriggerShape", 56),
-            IStruct("offset", "cSPVector3", 60),
+            Vector3("offset", 60),
             Field("timeToActivate", DataType.Float, 72),
             Field("persistentTimer", DataType.Bool, 76),
             Field("triggerOnceOnly", DataType.Bool, 77),

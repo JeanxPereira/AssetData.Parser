@@ -1,12 +1,12 @@
 namespace ReCap.Parser.Catalog;
 
-public sealed class cSPBoundingBox : AssetCatalog
+public sealed class cSPBoundingBoxCatalog : AssetCatalog
 {
     protected override void Build()
     {
         Struct("cSPBoundingBox", 24,
-            IStruct("min", "cSPVector3", 0),
-            IStruct("max", "cSPVector3", 12)
+            Vector3("min", 0),
+            Vector3("max", 12)
         );
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace ReCap.Parser;
@@ -72,10 +73,11 @@ public enum AssetNodeKind
     Array,
     String,
     Number,
-    Boolean,
+    Bool,
     Enum,
-    Asset,  // Asset reference (key path)
-    Null    // Nullable with no value
+    Asset,      // Asset reference (key path)
+    Nullable,       // Nullable with no value
+    Vector      // Vector2/3/4 or Orientation
 }
 
 /// <summary>
@@ -114,14 +116,8 @@ public sealed class StringNode : AssetNode
     private string _value = string.Empty;
     private AssetNodeKind _kind = AssetNodeKind.String;
     
-    /// <summary>
-    /// The kind of string node (String or Asset).
-    /// </summary>
     public override AssetNodeKind Kind => _kind;
     
-    /// <summary>
-    /// Set the kind during initialization (String or Asset).
-    /// </summary>
     public AssetNodeKind NodeKind
     {
         get => _kind;
@@ -138,7 +134,7 @@ public sealed class StringNode : AssetNode
 }
 
 /// <summary>
-/// Numeric value node (int, uint, float, int64, uint64).
+/// Numeric value node (int, uint, float, int64, uint64, uint16, uint8).
 /// </summary>
 public sealed class NumberNode : AssetNode
 {
@@ -165,12 +161,22 @@ public sealed class NumberNode : AssetNode
     
     public override string DisplayValue => Format switch
     {
-        NumberFormat.Hex => $"0x{(long)Value:X}",
-        NumberFormat.Float => Value.ToString("G9"),
+        NumberFormat.Hex => OriginalType switch
+        {
+            NumericType.UInt8 => $"0x{(byte)Value:X2}",
+            NumericType.UInt16 => $"0x{(ushort)Value:X4}",
+            NumericType.UInt32 or NumericType.HashId or NumericType.StringHash => $"0x{(uint)Value:X8}",
+            NumericType.UInt64 => $"0x{(ulong)Value:X16}",
+            _ => $"0x{(long)Value:X}"
+        },
+        NumberFormat.Float => Value.ToString("G9", CultureInfo.InvariantCulture),
         _ => OriginalType switch
         {
-            NumericType.Float => Value.ToString("G9"),
-            NumericType.Int64 or NumericType.UInt64 => ((long)Value).ToString(),
+            NumericType.Float => Value.ToString("G9", CultureInfo.InvariantCulture),
+            NumericType.Int64 => ((long)Value).ToString(),
+            NumericType.UInt64 => ((ulong)Value).ToString(),
+            NumericType.UInt8 => ((byte)Value).ToString(),
+            NumericType.UInt16 => ((ushort)Value).ToString(),
             _ => ((int)Value).ToString()
         }
     };
@@ -183,7 +189,7 @@ public sealed class BooleanNode : AssetNode
 {
     private bool _value;
     
-    public override AssetNodeKind Kind => AssetNodeKind.Boolean;
+    public override AssetNodeKind Kind => AssetNodeKind.Bool;
     
     public bool Value
     {
@@ -229,11 +235,70 @@ public sealed class EnumNode : AssetNode
 }
 
 /// <summary>
+/// Vector value node for Vector2, Vector3, Vector4, and Orientation.
+/// </summary>
+public sealed class VectorNode : AssetNode
+{
+    private float _x, _y, _z, _w;
+    
+    public override AssetNodeKind Kind => AssetNodeKind.Vector;
+    
+    /// <summary>Vector type: Vector2, Vector3, Vector4, or Orientation.</summary>
+    public VectorType VectorType { get; init; } = VectorType.Vector3;
+    
+    public float X
+    {
+        get => _x;
+        set => SetField(ref _x, value);
+    }
+    
+    public float Y
+    {
+        get => _y;
+        set => SetField(ref _y, value);
+    }
+    
+    public float Z
+    {
+        get => _z;
+        set => SetField(ref _z, value);
+    }
+    
+    public float W
+    {
+        get => _w;
+        set => SetField(ref _w, value);
+    }
+    
+    /// <summary>Number of components (2, 3, or 4).</summary>
+    public int ComponentCount => VectorType switch
+    {
+        VectorType.Vector2 => 2,
+        VectorType.Vector3 => 3,
+        _ => 4
+    };
+    
+    public override string DisplayValue => VectorType switch
+    {
+        VectorType.Vector2 => $"x: {FormatFloat(X)}, y: {FormatFloat(Y)}",
+        VectorType.Vector3 => $"x: {FormatFloat(X)}, y: {FormatFloat(Y)}, z: {FormatFloat(Z)}",
+        VectorType.Orientation => $"(quat) x: {FormatFloat(X)}, y: {FormatFloat(Y)}, z: {FormatFloat(Z)}, w: {FormatFloat(W)}",
+        _ => $"x: {FormatFloat(X)}, y: {FormatFloat(Y)}, z: {FormatFloat(Z)}, w: {FormatFloat(W)}"
+    };
+    
+    private static string FormatComponents(params float[] values)
+        => string.Join(" ", values.Select(FormatFloat));
+    
+    private static string FormatFloat(float v)
+        => v.ToString("0.######", CultureInfo.InvariantCulture);
+}
+
+/// <summary>
 /// Null/empty node for nullable structs without value.
 /// </summary>
 public sealed class NullNode : AssetNode
 {
-    public override AssetNodeKind Kind => AssetNodeKind.Null;
+    public override AssetNodeKind Kind => AssetNodeKind.Nullable;
     public override string DisplayValue => "(null)";
     public override bool IsEditable => false;
 }
@@ -247,7 +312,11 @@ public enum NumericType
     UInt32,
     Int64,
     UInt64,
-    Float
+    Float,
+    UInt16,
+    UInt8,
+    HashId,     // uint32 always displayed as hex
+    StringHash  // uint32 always displayed as hex
 }
 
 /// <summary>
@@ -258,4 +327,15 @@ public enum NumberFormat
     Decimal,
     Hex,
     Float
+}
+
+/// <summary>
+/// Vector type classification.
+/// </summary>
+public enum VectorType
+{
+    Vector2,
+    Vector3,
+    Vector4,
+    Orientation
 }

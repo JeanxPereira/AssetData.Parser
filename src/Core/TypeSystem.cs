@@ -5,47 +5,167 @@ using System.Linq;
 namespace ReCap.Parser;
 
 /// <summary>
-/// Darkspore asset data types. Hash values are FNV-1a (case-insensitive).
+/// Darkspore asset data types. Hash values are FNV-1a (case-insensitive) from the actual game binary.
+/// Verified by reverse engineering Darkspore.exe parser functions.
 /// </summary>
 public enum DataType : uint
 {
-    // Primitives - direct value in header
-    Bool    = 0x68FE5F59,
-    Int     = 0x1F886EB0,
-    UInt    = 0x54CC76D5,
-    Float   = 0x4EDCD7A9,
-    Enum    = 0x096339A2,
-    Int64   = 0x071568E6,
-    UInt64  = 0xEE28814F,
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRIMITIVES - Direct value in header (fixed size)
+    // ═══════════════════════════════════════════════════════════════════════
     
-    // Dynamic - indicator in header, data in blob if != 0
-    Key     = 0x46842E82,
-    Char    = 0xF6C8069D,   // inline char[] buffer (size in BufferSize)
-    CharPtr = 0x19E2690D,   // null-terminated string in blob
-    Asset   = 0x9C617503,
+    /// <summary>bool - 1 byte stored as 4 bytes, compares "true" string</summary>
+    Bool        = 0x68FE5F59,
     
-    // Containers
-    Array    = 0x555CCDF4,  // [hasValue:4][count:4] in header
-    Nullable = 0x71AB5182,  // [hasValue:4] in header
+    /// <summary>int - 4 bytes, parsed with atoi()</summary>
+    Int         = 0x1F886EB0,
     
-    // Inline struct
-    Struct   = 0x00000008
+    /// <summary>int32_t - 4 bytes, same as Int but explicit 32-bit</summary>
+    Int32       = 0x45D8F3DE,
+    
+    /// <summary>uint32_t - 4 bytes, supports "0x" hex prefix</summary>
+    UInt32      = 0xE48967A3,
+    
+    /// <summary>Unknown type (0x2E10AAAE) - 4 bytes, always formatted as hex, same parser as UInt32</summary>
+    HashId      = 0x2E10AAAE,
+    
+    /// <summary>Unknown type (0x1FB04A19) - 4 bytes, supports hex, same parser as UInt32</summary>
+    StringHash  = 0x1FB04A19,
+    
+    /// <summary>uint16_t - 2 bytes</summary>
+    UInt16      = 0x7EF65E35,
+    
+    /// <summary>uint8_t - 1 byte</summary>
+    UInt8       = 0xCDBE69CA,
+    
+    /// <summary>float - 4 bytes, parsed with atof()</summary>
+    Float       = 0x4EDCD7A9,
+    
+    /// <summary>int64 - 8 bytes, parsed with _strtoi64()</summary>
+    Int64       = 0x4C91FF43,
+    
+    /// <summary>uint64_t - 8 bytes, supports "0x" hex prefix</summary>
+    UInt64      = 0x5DDA2052,
+    
+    /// <summary>enum - 4 bytes, uses enum lookup table</summary>
+    Enum        = 0x096339A2,
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // VECTORS - Inline fixed-size multi-component types
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /// <summary>cSPVector2 - 8 bytes (2 floats), parsed as "%f %f"</summary>
+    Vector2     = 0x9EB342FE,
+    
+    /// <summary>cSPVector3 - 12 bytes (3 floats), parsed as "%f %f %f"</summary>
+    Vector3     = 0x9EB342FF,
+    
+    /// <summary>cSPVector4 - 16 bytes (4 floats), parsed as "%f %f %f %f"</summary>
+    Vector4     = 0x9EB342F8,
+    
+    /// <summary>
+    /// orientation/quaternion - 16 bytes (4 floats as XYZW)
+    /// Accepts 3 floats (Euler angles in degrees) or 4 floats (quaternion WXYZ -> stored XYZW)
+    /// </summary>
+    Orientation = 0x75EC94F5,
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // DYNAMIC - Indicator in header, data in blob if != 0
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /// <summary>key - asset reference hash, data in blob</summary>
+    Key         = 0x46842E82,
+    
+    /// <summary>char - inline char[] buffer (size in BufferSize) OR blob string</summary>
+    Char        = 0xF6C8069D,
+    
+    /// <summary>char* - null-terminated string pointer, data in blob</summary>
+    CharPtr     = 0x19E2690D,
+    
+    /// <summary>asset - asset path reference (checks for "[null]"), data in blob</summary>
+    Asset       = 0x9C617503,
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONTAINERS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /// <summary>array - [hasValue:4][count:4] in header, elements in blob</summary>
+    Array       = 0x555CCDF4,
+    
+    /// <summary>nullable - [hasValue:4] in header, struct in blob if hasValue != 0</summary>
+    Nullable    = 0x71AB5182,
+    
+    /// <summary>tAssetPropertyVector - [count:4][pointer:4] in header, array of 188-byte items in blob</summary>
+    AssetPropertyVector = 0xE8A2A5D7,
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SPECIAL
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /// <summary>Inline struct - no indicator, fields embedded at offset</summary>
+    Struct      = 0x00000008,
+    
+    // Legacy aliases for compatibility
+    [Obsolete("Use Int instead")] Int_Legacy = 0x1F886EB0,
+    [Obsolete("Use UInt32 instead")] UInt = 0x54CC76D5
 }
 
 public static class DataTypeExtensions
 {
+    /// <summary>Returns true if type is a fixed-size primitive (fits in header directly).</summary>
     public static bool IsPrimitive(this DataType type) => type switch
     {
-        DataType.Bool or DataType.Int or DataType.UInt or 
-        DataType.Float or DataType.Enum or DataType.Int64 or 
-        DataType.UInt64 => true,
+        DataType.Bool or DataType.Int or DataType.Int32 or 
+        DataType.UInt32 or DataType.HashId or DataType.StringHash or
+        DataType.UInt16 or DataType.UInt8 or
+        DataType.Float or DataType.Enum or 
+        DataType.Int64 or DataType.UInt64 => true,
         _ => false
     };
     
+    /// <summary>Returns true if type is a vector (multi-component inline).</summary>
+    public static bool IsVector(this DataType type) => type switch
+    {
+        DataType.Vector2 or DataType.Vector3 or 
+        DataType.Vector4 or DataType.Orientation => true,
+        _ => false
+    };
+    
+    /// <summary>Returns true if type has indicator in header and data in blob.</summary>
     public static bool IsDynamic(this DataType type) => type switch
     {
         DataType.Key or DataType.Char or DataType.CharPtr or 
         DataType.Asset => true,
+        _ => false
+    };
+    
+    /// <summary>Returns the size in bytes for primitive and vector types.</summary>
+    public static int GetSize(this DataType type) => type switch
+    {
+        DataType.Bool => 4,      // Stored as 4-byte int
+        DataType.Int => 4,
+        DataType.Int32 => 4,
+        DataType.UInt32 => 4,
+        DataType.HashId => 4,
+        DataType.StringHash => 4,
+        DataType.UInt16 => 2,
+        DataType.UInt8 => 1,
+        DataType.Float => 4,
+        DataType.Enum => 4,
+        DataType.Int64 => 8,
+        DataType.UInt64 => 8,
+        DataType.Vector2 => 8,
+        DataType.Vector3 => 12,
+        DataType.Vector4 => 16,
+        DataType.Orientation => 16,
+        DataType.AssetPropertyVector => 8,  // count + pointer
+        _ => 4  // Default indicator size for dynamic types
+    };
+    
+    /// <summary>Returns true if this type should be displayed in hex format.</summary>
+    public static bool PreferHexFormat(this DataType type) => type switch
+    {
+        DataType.HashId or DataType.StringHash or DataType.Key => true,
         _ => false
     };
 }
@@ -60,7 +180,7 @@ public sealed record FieldDefinition(
     string? ElementType = null,
     int CountOffset = 4,
     int BufferSize = 0,
-    string? EnumType = null        // For Enum fields: name of the enum definition
+    string? EnumType = null
 )
 {
     public bool IsStructArray => Type == DataType.Array && ElementType != null && 
@@ -85,7 +205,7 @@ public sealed class StructDefinition
 }
 
 /// <summary>
-/// File type registration info (auto-generated from struct name and size).
+/// File type registration info.
 /// </summary>
 public sealed record FileTypeInfo(string Extension, string RootStruct, int HeaderSize);
 
@@ -111,9 +231,6 @@ public sealed class EnumDefinition
     public string? GetName(uint value) => _values.GetValueOrDefault(value);
     public uint? GetValue(string name) => _names.TryGetValue(name, out var v) ? v : null;
     
-    /// <summary>
-    /// Format value as "Name" if known, or "0xHEX" if not.
-    /// </summary>
     public string Format(uint value)
     {
         if (_values.TryGetValue(value, out var name))
@@ -123,7 +240,7 @@ public sealed class EnumDefinition
 }
 
 /// <summary>
-/// Base class for asset type catalogs. Override Build() to define structs and enums.
+/// Base class for asset type catalogs.
 /// </summary>
 public abstract class AssetCatalog
 {
@@ -146,18 +263,77 @@ public abstract class AssetCatalog
         return new EnumBuilder(def);
     }
     
-    // Field definition helpers
+    // ═══════════════════════════════════════════════════════════════════════
+    // Field definition helpers - Primitives
+    // ═══════════════════════════════════════════════════════════════════════
+    
     protected static FieldDefinition Field(string name, DataType type, int offset)
         => new(name, type, offset);
     
-    /// <summary>
-    /// Define an enum field with type mapping for named values.
-    /// </summary>
+    protected static FieldDefinition Bool(string name, int offset)
+        => new(name, DataType.Bool, offset);
+    
+    protected static FieldDefinition Int(string name, int offset)
+        => new(name, DataType.Int, offset);
+    
+    protected static FieldDefinition UInt32(string name, int offset)
+        => new(name, DataType.UInt32, offset);
+    
+    protected static FieldDefinition HashId(string name, int offset)
+        => new(name, DataType.HashId, offset);
+    
+    protected static FieldDefinition StringHash(string name, int offset)
+        => new(name, DataType.StringHash, offset);
+    
+    protected static FieldDefinition UInt16(string name, int offset)
+        => new(name, DataType.UInt16, offset);
+    
+    protected static FieldDefinition UInt8(string name, int offset)
+        => new(name, DataType.UInt8, offset);
+    
+    protected static FieldDefinition Float(string name, int offset)
+        => new(name, DataType.Float, offset);
+    
+    protected static FieldDefinition Int64(string name, int offset)
+        => new(name, DataType.Int64, offset);
+    
+    protected static FieldDefinition UInt64(string name, int offset)
+        => new(name, DataType.UInt64, offset);
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // Field definition helpers - Vectors
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    protected static FieldDefinition Vector2(string name, int offset)
+        => new(name, DataType.Vector2, offset);
+    
+    protected static FieldDefinition Vector3(string name, int offset)
+        => new(name, DataType.Vector3, offset);
+    
+    protected static FieldDefinition Vector4(string name, int offset)
+        => new(name, DataType.Vector4, offset);
+    
+    protected static FieldDefinition Orientation(string name, int offset)
+        => new(name, DataType.Orientation, offset);
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // Field definition helpers - Dynamic & Containers
+    // ═══════════════════════════════════════════════════════════════════════
+    
     protected static FieldDefinition EnumField(string name, string enumType, int offset)
         => new(name, DataType.Enum, offset, EnumType: enumType);
     
+    protected static FieldDefinition Key(string name, int offset)
+        => new(name, DataType.Key, offset);
+    
     protected static FieldDefinition CharBuffer(string name, int offset, int bufferSize)
         => new(name, DataType.Char, offset, BufferSize: bufferSize);
+    
+    protected static FieldDefinition CharPtr(string name, int offset)
+        => new(name, DataType.CharPtr, offset);
+    
+    protected static FieldDefinition Asset(string name, int offset)
+        => new(name, DataType.Asset, offset);
     
     protected static FieldDefinition Array(string name, DataType elementType, int offset, int countOffset = 4)
         => new(name, DataType.Array, offset, elementType.ToString(), countOffset);
@@ -202,9 +378,6 @@ public sealed class EnumBuilder
         return this;
     }
     
-    /// <summary>
-    /// Add value using FNV-1a hash of name (case-insensitive).
-    /// </summary>
     public EnumBuilder Hash(string name)
     {
         _def.Add(name, FnvHash(name));

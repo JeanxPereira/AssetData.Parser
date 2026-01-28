@@ -1,12 +1,16 @@
 namespace ReCap.Parser.Catalog;
 
-public sealed class AIDefinition : AssetCatalog
+/// <summary>
+/// AI Definition - creature AI behavior tree.
+/// Size: 640 bytes
+/// </summary>
+public sealed class AIDefinitionCatalog : AssetCatalog
 {
     protected override void Build()
     {
         Struct("AIDefinition", 640,
             ArrayStruct("ainode", "cAINode", 0),
-            Field("deathAbility", DataType.Key, 512)
+            Key("deathAbility", 512)
         );
     }
 }

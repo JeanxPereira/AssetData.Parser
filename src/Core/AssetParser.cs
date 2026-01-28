@@ -53,7 +53,7 @@ public sealed class BlobReader
 
 /// <summary>
 /// Darkspore binary asset parser. Returns AssetNode tree directly for optimal performance.
-/// No XML intermediate step - direct object model for MVVM binding.
+/// Based on reverse engineering of Darkspore.exe parser functions.
 /// </summary>
 public sealed class AssetParser
 {
@@ -137,7 +137,6 @@ public sealed class AssetParser
 
     /// <summary>
     /// Parse a binary asset file and return the root AssetNode.
-    /// This is the main API - returns objects directly, no XML!
     /// </summary>
     public AssetNode ParseFile(string filePath)
     {
@@ -197,7 +196,10 @@ public sealed class AssetParser
         {
             return field.Type switch
             {
+                // ═══════════════════════════════════════════════════════════
                 // Primitives
+                // ═══════════════════════════════════════════════════════════
+                
                 DataType.Bool => new BooleanNode
                 {
                     Name = field.Name,
@@ -205,7 +207,7 @@ public sealed class AssetParser
                     BinaryOffset = offset
                 },
                 
-                DataType.Int => new NumberNode
+                DataType.Int or DataType.Int32 => new NumberNode
                 {
                     Name = field.Name,
                     Value = ReadInt32(offset),
@@ -213,11 +215,46 @@ public sealed class AssetParser
                     BinaryOffset = offset
                 },
                 
-                DataType.UInt => new NumberNode
+                DataType.UInt32 => new NumberNode
                 {
                     Name = field.Name,
                     Value = ReadUInt32(offset),
                     OriginalType = NumericType.UInt32,
+                    BinaryOffset = offset
+                },
+                
+                // HashId and StringHash are uint32 but prefer hex display
+                DataType.HashId => new NumberNode
+                {
+                    Name = field.Name,
+                    Value = ReadUInt32(offset),
+                    OriginalType = NumericType.HashId,
+                    Format = NumberFormat.Hex,
+                    BinaryOffset = offset
+                },
+                
+                DataType.StringHash => new NumberNode
+                {
+                    Name = field.Name,
+                    Value = ReadUInt32(offset),
+                    OriginalType = NumericType.StringHash,
+                    Format = NumberFormat.Hex,
+                    BinaryOffset = offset
+                },
+                
+                DataType.UInt16 => new NumberNode
+                {
+                    Name = field.Name,
+                    Value = ReadUInt16(offset),
+                    OriginalType = NumericType.UInt16,
+                    BinaryOffset = offset
+                },
+                
+                DataType.UInt8 => new NumberNode
+                {
+                    Name = field.Name,
+                    Value = ReadUInt8(offset),
+                    OriginalType = NumericType.UInt8,
                     BinaryOffset = offset
                 },
                 
@@ -248,16 +285,69 @@ public sealed class AssetParser
                 
                 DataType.Enum => ParseEnumField(field, offset),
                 
+                // ═══════════════════════════════════════════════════════════
+                // Vectors
+                // ═══════════════════════════════════════════════════════════
+                
+                DataType.Vector2 => new VectorNode
+                {
+                    Name = field.Name,
+                    VectorType = VectorType.Vector2,
+                    X = ReadFloat(offset),
+                    Y = ReadFloat(offset + 4),
+                    BinaryOffset = offset
+                },
+                
+                DataType.Vector3 => new VectorNode
+                {
+                    Name = field.Name,
+                    VectorType = VectorType.Vector3,
+                    X = ReadFloat(offset),
+                    Y = ReadFloat(offset + 4),
+                    Z = ReadFloat(offset + 8),
+                    BinaryOffset = offset
+                },
+                
+                DataType.Vector4 => new VectorNode
+                {
+                    Name = field.Name,
+                    VectorType = VectorType.Vector4,
+                    X = ReadFloat(offset),
+                    Y = ReadFloat(offset + 4),
+                    Z = ReadFloat(offset + 8),
+                    W = ReadFloat(offset + 12),
+                    BinaryOffset = offset
+                },
+                
+                // Orientation is stored as XYZW quaternion
+                DataType.Orientation => new VectorNode
+                {
+                    Name = field.Name,
+                    VectorType = VectorType.Orientation,
+                    X = ReadFloat(offset),
+                    Y = ReadFloat(offset + 4),
+                    Z = ReadFloat(offset + 8),
+                    W = ReadFloat(offset + 12),
+                    BinaryOffset = offset
+                },
+                
+                // ═══════════════════════════════════════════════════════════
                 // Dynamic types
+                // ═══════════════════════════════════════════════════════════
+                
                 DataType.Key => ParseKeyField(field, offset),
                 DataType.Char => ParseCharField(field, offset),
                 DataType.CharPtr => ParseCharPtrField(field, offset),
                 DataType.Asset => ParseAssetField(field, offset),
                 
+                // ═══════════════════════════════════════════════════════════
                 // Containers
+                // ═══════════════════════════════════════════════════════════
+                
                 DataType.Array => ParseArrayField(field, offset),
                 DataType.Nullable => ParseNullableField(field, offset),
                 DataType.Struct => ParseInlineStructField(field, offset),
+                DataType.AssetPropertyVector => ParseAssetPropertyVectorField(field, offset),
                 
                 _ => null
             };
@@ -392,14 +482,13 @@ public sealed class AssetParser
             return arrayNode;
         }
         
-        // Must be a primitive or dynamic type
+        // Must be a primitive, vector, or dynamic type
         if (!Enum.TryParse<DataType>(field.ElementType, true, out var elemType))
             throw new InvalidOperationException($"Unknown element type: {field.ElementType}");
         
         // Handle dynamic types (strings) - each has a 4-byte indicator in the header array
         if (elemType.IsDynamic())
         {
-            // Reserve space for indicator array (4 bytes per element)
             int indicatorStart = _blob.ReserveArray(4, count);
             
             for (int i = 0; i < count; i++)
@@ -433,18 +522,126 @@ public sealed class AssetParser
             return arrayNode;
         }
         
+        // Handle vector types
+        if (elemType.IsVector())
+        {
+            int elementSize = elemType.GetSize();
+            int arrayStart = _blob.ReserveArray(elementSize, count);
+            
+            for (int i = 0; i < count; i++)
+            {
+                int elemOffset = arrayStart + (i * elementSize);
+                var entry = CreateVectorNode($"[{i}]", elemType, elemOffset);
+                arrayNode.AddChild(entry);
+            }
+            return arrayNode;
+        }
+        
         // Handle primitive types
-        int elementSize = GetPrimitiveSize(elemType);
-        int arrayStart2 = _blob.ReserveArray(elementSize, count);
+        int primitiveSize = elemType.GetSize();
+        int arrayStart2 = _blob.ReserveArray(primitiveSize, count);
         
         for (int i = 0; i < count; i++)
         {
-            int elemOffset = arrayStart2 + (i * elementSize);
+            int elemOffset = arrayStart2 + (i * primitiveSize);
             var entry = CreatePrimitiveNode($"[{i}]", elemType, elemOffset, field.EnumType);
             arrayNode.AddChild(entry);
         }
         
         return arrayNode;
+    }
+    
+    private AssetNode ParseAssetPropertyVectorField(FieldDefinition field, int offset)
+    {
+        // Read count and pointer from header
+        int count = ReadInt32(offset);
+        uint dataPointer = ReadUInt32(offset + 4);
+        
+        var arrayNode = new ArrayNode
+        {
+            Name = field.Name,
+            ElementType = "AssetProperty",
+            BinaryOffset = offset
+        };
+        
+        if (count <= 0 || dataPointer == 0)
+            return arrayNode;
+        
+        // Reserve blob space for array
+        // Each AssetProperty item is 188 bytes (0xBC)
+        const int ITEM_SIZE = 188;
+        int arrayStart = _blob.ReserveArray(ITEM_SIZE, count);
+        
+        // Parse each AssetProperty struct
+        for (int i = 0; i < count; i++)
+        {
+            int itemOffset = arrayStart + (i * ITEM_SIZE);
+            var item = ParseAssetPropertyItem(i, itemOffset);
+            arrayNode.AddChild(item);
+        }
+        
+        return arrayNode;
+    }
+    
+    private StructNode ParseAssetPropertyItem(int index, int offset)
+    {
+        var item = new StructNode
+        {
+            Name = $"[{index}]",
+            TypeName = "AssetProperty",
+            BinaryOffset = offset
+        };
+        
+        // Parse 4-byte header fields (16 bytes total)
+        item.AddChild(new NumberNode
+        {
+            Name = "NameHash",
+            Value = ReadUInt32(offset),
+            OriginalType = NumericType.HashId,
+            Format = NumberFormat.Hex,
+            BinaryOffset = offset
+        });
+        
+        item.AddChild(new NumberNode
+        {
+            Name = "TypeHash",
+            Value = ReadUInt32(offset + 4),
+            OriginalType = NumericType.HashId,
+            Format = NumberFormat.Hex,
+            BinaryOffset = offset + 4
+        });
+        
+        item.AddChild(new NumberNode
+        {
+            Name = "ValueOffset",
+            Value = ReadUInt32(offset + 8),
+            OriginalType = NumericType.UInt32,
+            BinaryOffset = offset + 8
+        });
+        
+        item.AddChild(new NumberNode
+        {
+            Name = "Flags",
+            Value = ReadUInt32(offset + 12),
+            OriginalType = NumericType.UInt32,
+            Format = NumberFormat.Hex,
+            BinaryOffset = offset + 12
+        });
+        
+        // Read 172 bytes of variant data
+        // TODO: This could be interpreted based on TypeHash
+        // For now, display as hex dump for debugging
+        var dataBytes = new byte[172];
+        Array.Copy(_data, offset + 16, dataBytes, 0, 172);
+        
+        item.AddChild(new StringNode
+        {
+            Name = "VariantData",
+            Value = $"[{dataBytes.Length} bytes]",
+            BinaryOffset = offset + 16
+        });
+        
+        return item;
     }
     
     private AssetNode? ParseNullableField(FieldDefinition field, int offset)
@@ -491,6 +688,48 @@ public sealed class AssetParser
         return node;
     }
     
+    private VectorNode CreateVectorNode(string name, DataType type, int offset) => type switch
+    {
+        DataType.Vector2 => new VectorNode
+        {
+            Name = name,
+            VectorType = VectorType.Vector2,
+            X = ReadFloat(offset),
+            Y = ReadFloat(offset + 4),
+            BinaryOffset = offset
+        },
+        DataType.Vector3 => new VectorNode
+        {
+            Name = name,
+            VectorType = VectorType.Vector3,
+            X = ReadFloat(offset),
+            Y = ReadFloat(offset + 4),
+            Z = ReadFloat(offset + 8),
+            BinaryOffset = offset
+        },
+        DataType.Vector4 => new VectorNode
+        {
+            Name = name,
+            VectorType = VectorType.Vector4,
+            X = ReadFloat(offset),
+            Y = ReadFloat(offset + 4),
+            Z = ReadFloat(offset + 8),
+            W = ReadFloat(offset + 12),
+            BinaryOffset = offset
+        },
+        DataType.Orientation => new VectorNode
+        {
+            Name = name,
+            VectorType = VectorType.Orientation,
+            X = ReadFloat(offset),
+            Y = ReadFloat(offset + 4),
+            Z = ReadFloat(offset + 8),
+            W = ReadFloat(offset + 12),
+            BinaryOffset = offset
+        },
+        _ => throw new InvalidOperationException($"Not a vector type: {type}")
+    };
+    
     private AssetNode CreatePrimitiveNode(string name, DataType type, int offset, string? enumType) => type switch
     {
         DataType.Bool => new BooleanNode
@@ -499,18 +738,48 @@ public sealed class AssetParser
             Value = ReadUInt32(offset) != 0,
             BinaryOffset = offset
         },
-        DataType.Int => new NumberNode
+        DataType.Int or DataType.Int32 => new NumberNode
         {
             Name = name,
             Value = ReadInt32(offset),
             OriginalType = NumericType.Int32,
             BinaryOffset = offset
         },
-        DataType.UInt => new NumberNode
+        DataType.UInt32 => new NumberNode
         {
             Name = name,
             Value = ReadUInt32(offset),
             OriginalType = NumericType.UInt32,
+            BinaryOffset = offset
+        },
+        DataType.HashId => new NumberNode
+        {
+            Name = name,
+            Value = ReadUInt32(offset),
+            OriginalType = NumericType.HashId,
+            Format = NumberFormat.Hex,
+            BinaryOffset = offset
+        },
+        DataType.StringHash => new NumberNode
+        {
+            Name = name,
+            Value = ReadUInt32(offset),
+            OriginalType = NumericType.StringHash,
+            Format = NumberFormat.Hex,
+            BinaryOffset = offset
+        },
+        DataType.UInt16 => new NumberNode
+        {
+            Name = name,
+            Value = ReadUInt16(offset),
+            OriginalType = NumericType.UInt16,
+            BinaryOffset = offset
+        },
+        DataType.UInt8 => new NumberNode
+        {
+            Name = name,
+            Value = ReadUInt8(offset),
+            OriginalType = NumericType.UInt8,
             BinaryOffset = offset
         },
         DataType.Float => new NumberNode
@@ -545,7 +814,12 @@ public sealed class AssetParser
         _ => throw new InvalidOperationException($"Not a primitive type: {type}")
     };
     
+    // ═══════════════════════════════════════════════════════════════════════
     // Binary readers using Span for performance
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    private byte ReadUInt8(int offset) => _data[offset];
+    private ushort ReadUInt16(int offset) => BitConverter.ToUInt16(_data.AsSpan(offset, 2));
     private int ReadInt32(int offset) => BitConverter.ToInt32(_data.AsSpan(offset, 4));
     private uint ReadUInt32(int offset) => BitConverter.ToUInt32(_data.AsSpan(offset, 4));
     private long ReadInt64(int offset) => BitConverter.ToInt64(_data.AsSpan(offset, 8));
@@ -560,16 +834,4 @@ public sealed class AssetParser
             end++;
         return Encoding.UTF8.GetString(_data.AsSpan(offset, end - offset));
     }
-    
-    private static int GetPrimitiveSize(DataType type) => type switch
-    {
-        DataType.Bool => 4,
-        DataType.Int => 4,
-        DataType.UInt => 4,
-        DataType.Float => 4,
-        DataType.Enum => 4,
-        DataType.Int64 => 8,
-        DataType.UInt64 => 8,
-        _ => throw new InvalidOperationException($"Not a primitive type: {type}")
-    };
 }
