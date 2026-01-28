@@ -68,6 +68,16 @@ public static class WikiCatalog
     {
         var sb = new StringBuilder();
         
+        // Header with icon
+        sb.AppendLine("<h3>");
+        sb.AppendLine("  <img");
+        sb.AppendLine("    src=\"https://raw.githubusercontent.com/JeanxPereira/ReCap.Parser/refs/heads/main/.github/icon.png\"");
+        sb.AppendLine("    width=\"32\"");
+        sb.AppendLine("    align=\"center\"");
+        sb.AppendLine("  />");
+        sb.AppendLine("  Darkspore AssetData");
+        sb.AppendLine("</h3>");
+
         sb.AppendLine("## Base");
         sb.AppendLine("* **[Home](https://github.com/JeanxPereira/ReCap.Parser/wiki/Home )**");
         sb.AppendLine();

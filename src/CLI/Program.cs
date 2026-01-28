@@ -296,67 +296,153 @@ public static partial class Program
         return 0;
     }
     
+    /// <summary>
+    /// Renders tree with syntax highlighting.
+    /// </summary>
     private static void PrintTree(AssetNode node, int indent)
     {
+        // 1. Ocultar completamente campos Nullables vazios para limpar o log
+        if (node is NullNode) return;
+
         var prefix = new string(' ', indent * 2);
         Console.Write(prefix);
-        
-        // Type (Cyan)
+
+        // --- Determinar o Nome Exato do Tipo ---
+        string typeLabel = node.Kind.ToString();
+
+        switch (node)
+        {
+            case NumberNode n:
+                // Ex: Int32, UInt32, Float, HashId
+                typeLabel = n.OriginalType.ToString(); 
+                break;
+            case VectorNode v:
+                // Ex: Vector3, Vector2, Orientation
+                typeLabel = v.VectorType.ToString(); 
+                break;
+            case BooleanNode:
+                typeLabel = "Bool";
+                break;
+            // Asset, Struct, Enum, String, Array usam o Kind padrão
+        }
+
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.Write(node.Kind.ToString());
+        Console.Write(typeLabel);
         
-        // Separator
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write(".");
         
-        // Name (White)
         Console.ForegroundColor = ConsoleColor.White;
         Console.Write(node.Name);
         
-        // Value
+        // --- Valor (Início) ---
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write("(");
         
-        // Value color based on type
-        switch (node)
+        // --- Renderização do Valor ---
+        if (node is VectorNode vec)
         {
-            case StringNode sn:
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write(sn.Value);
-                break;
-            case NumberNode nn:
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.Write(nn.DisplayValue);
-                break;
-            case BooleanNode bn:
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write(bn.DisplayValue);
-                break;
-            case EnumNode en:
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.Write(en.DisplayValue);
-                break;
-            case ArrayNode an:
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.Write(an.Children.Count);
-                break;
-            case StructNode sn:
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
-                Console.Write(sn.TypeName);
-                break;
-            default:
-                Console.ForegroundColor = ConsoleColor.Gray;
-                Console.Write(node.DisplayValue);
-                break;
+             PrintVector(vec);
+        }
+        else
+        {
+            switch (node)
+            {
+                case StringNode sn:
+                    Console.ForegroundColor = ConsoleColor.Green; 
+                    Console.Write(sn.Value);
+                    break;
+                case NumberNode nn:
+                    // Se for HashId/StringHash/Hex, pinta de Azul, senão Magenta
+                    if (nn.Format == NumberFormat.Hex)
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                    else
+                        Console.ForegroundColor = ConsoleColor.Magenta;
+                    
+                    Console.Write(nn.DisplayValue);
+                    break;
+                case BooleanNode bn:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write(bn.DisplayValue);
+                    break;
+                case EnumNode en:
+                    // Azul para enums
+                    Console.ForegroundColor = ConsoleColor.Blue; 
+                    Console.Write(en.DisplayValue);
+                    break;
+                case ArrayNode an:
+                    Console.ForegroundColor = ConsoleColor.DarkYellow; 
+                    Console.Write(an.Children.Count);
+                    break;
+                case StructNode sn:
+                    Console.ForegroundColor = ConsoleColor.DarkCyan; 
+                    Console.Write(sn.TypeName);
+                    break;
+                case AssetNode an when an.Kind == AssetNodeKind.Asset:
+                    Console.ForegroundColor = ConsoleColor.Green; // Asset path verde
+                    Console.Write(an.DisplayValue);
+                    break;
+                default:
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.Write(node.DisplayValue);
+                    break;
+            }
         }
         
+        // --- Fechar ---
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write(")");
         Console.ResetColor();
         Console.WriteLine();
         
+        // Recursão para filhos
         foreach (var child in node.Children)
             PrintTree(child, indent + 1);
+    }
+
+    /// <summary>
+    /// Helper to print styled vector components (X=Red, Y=Green, Z=Blue)
+    /// </summary>
+    private static void PrintVector(VectorNode vec)
+    {
+        string fmt = "0.######";
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+
+        void PrintComp(string label, float val, ConsoleColor color, bool comma = true)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write(label);
+            Console.Write(": ");
+
+            Console.ForegroundColor = color;
+            Console.Write(val.ToString(fmt, ci));
+            
+            if (comma)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write(", ");
+            }
+        }
+
+        switch (vec.VectorType)
+        {
+            case VectorType.Vector2:
+                PrintComp("x", vec.X, ConsoleColor.Magenta);
+                PrintComp("y", vec.Y, ConsoleColor.Magenta, false);
+                break;
+            case VectorType.Vector3:
+                PrintComp("x", vec.X, ConsoleColor.Magenta);
+                PrintComp("y", vec.Y, ConsoleColor.Magenta);
+                PrintComp("z", vec.Z, ConsoleColor.Magenta, false);
+                break;
+            case VectorType.Vector4:
+            case VectorType.Orientation:
+                PrintComp("x", vec.X, ConsoleColor.Magenta);
+                PrintComp("y", vec.Y, ConsoleColor.Magenta);
+                PrintComp("z", vec.Z, ConsoleColor.Magenta);
+                PrintComp("w", vec.W, ConsoleColor.Yellow, false);
+                break;
+        }
     }
     
     private static void PrintUsage()
