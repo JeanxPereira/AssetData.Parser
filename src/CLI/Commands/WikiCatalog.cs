@@ -113,6 +113,7 @@ public static class WikiCatalog
                 {
                     string? dep = null;
                     if (field.Type == DataType.Struct) dep = field.ElementType;
+                    else if (field.Type == DataType.Nullable) dep = field.ElementType;
                     else if (field.Type == DataType.Enum) dep = field.EnumType;
                     else if (field.Type == DataType.Array && field.ElementType != null)
                     {
@@ -191,6 +192,12 @@ public static class WikiCatalog
         {
             var name = field.ElementType ?? "Unknown";
             return $"[`({name})`]({name})";
+        }
+
+        if (field.Type == DataType.Nullable)
+        {
+            var name = field.ElementType ?? "Unknown";
+            return $"`Nullable` [`({name})`]({name})";
         }
 
         if (field.Type == DataType.Enum)
