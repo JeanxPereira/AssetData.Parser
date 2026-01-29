@@ -267,8 +267,15 @@ public abstract class AssetCatalog
     // Field definition helpers - Primitives
     // ═══════════════════════════════════════════════════════════════════════
     
-    protected static FieldDefinition Field(string name, DataType type, int offset)
-        => new(name, type, offset);
+    /// <summary>
+    /// Generic field definition helper with optional buffer size for Char types.
+    /// </summary>
+    /// <param name="name">Field name</param>
+    /// <param name="type">Data type</param>
+    /// <param name="offset">Byte offset in struct</param>
+    /// <param name="bufferSize">Optional buffer size for inline Char fields (default: 0 = dynamic blob string)</param>
+    protected static FieldDefinition Field(string name, DataType type, int offset, int bufferSize = 0)
+        => new(name, type, offset, BufferSize: bufferSize);
     
     protected static FieldDefinition Bool(string name, int offset)
         => new(name, DataType.Bool, offset);

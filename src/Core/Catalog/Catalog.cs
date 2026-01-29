@@ -9,7 +9,6 @@ public sealed class Catalog : AssetCatalog
 {
     protected override void Build()
     {
-        // Catalog root - header size is 8 bytes (array indicator + count)
         Struct("Catalog", 8,
             ArrayStruct("entries", "CatalogEntry", 0, countOffset: 4)
         );

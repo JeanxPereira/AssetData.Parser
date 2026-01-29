@@ -158,5 +158,29 @@ public sealed class Enums : AssetCatalog
             .Value("cyber", 0)
             .Value("chrono", 1)
             .Value("generic", 5);
+
+        Enum("Markerset.condition")
+            .Value("hordeLevelsOnly", 0)
+            .Value("bossLevelsOnly", 1);
+
+        Enum("cLabsMarker.navMeshSetting")
+            .Value("from definition", 0)
+            .Value("include", 1)
+            .Value("exclude", 2);
+
+        Enum("cLabsMarker.type")
+            .Value("global0", 0)
+            .Value("global1", 1)
+            .Value("global2", 2)
+            .Value("local0", 3)
+            .Value("local1", 4)
+            .Value("local2", 5)
+            .Value("character0", 6)
+            .Value("character1", 7);
+
+        Enum("cLabsMarker.shadowed")
+            .Value("not_shadowed", 0)
+            .Value("yes_shadowed", 1)
+            .Value("inv_shadowed", 2);
     }
 }
