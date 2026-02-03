@@ -29,8 +29,8 @@ public enum DataType : uint
     /// <summary>Unknown type (0x2E10AAAE) - 4 bytes, always formatted as hex, same parser as UInt32</summary>
     HashId      = 0x2E10AAAE,
     
-    /// <summary>Unknown type (0x1FB04A19) - 4 bytes, supports hex, same parser as UInt32</summary>
-    StringHash  = 0x1FB04A19,
+    /// <summary>tObjID - 4 bytes. Object Reference/Identifier.</summary>
+    ObjId       = 0x1FB04A19,
     
     /// <summary>uint16_t - 2 bytes</summary>
     UInt16      = 0x7EF65E35,
@@ -84,7 +84,10 @@ public enum DataType : uint
     
     /// <summary>asset - asset path reference (checks for "[null]"), data in blob</summary>
     Asset       = 0x9C617503,
-    
+
+    /// <summary>cLocalizedAssetString - dual-string localized reference (8 bytes: 2 indicators + 2 blob strings)</summary>
+    cLocalizedAssetString = 0x1D1FF116,
+
     // ═══════════════════════════════════════════════════════════════════════
     // CONTAINERS
     // ═══════════════════════════════════════════════════════════════════════
@@ -116,7 +119,7 @@ public static class DataTypeExtensions
     public static bool IsPrimitive(this DataType type) => type switch
     {
         DataType.Bool or DataType.Int or DataType.Int32 or 
-        DataType.UInt32 or DataType.HashId or DataType.StringHash or
+        DataType.UInt32 or DataType.HashId or DataType.ObjId or
         DataType.UInt16 or DataType.UInt8 or
         DataType.Float or DataType.Enum or 
         DataType.Int64 or DataType.UInt64 => true,
@@ -134,8 +137,8 @@ public static class DataTypeExtensions
     /// <summary>Returns true if type has indicator in header and data in blob.</summary>
     public static bool IsDynamic(this DataType type) => type switch
     {
-        DataType.Key or DataType.Char or DataType.CharPtr or 
-        DataType.Asset => true,
+        DataType.Key or DataType.Char or DataType.CharPtr or
+        DataType.Asset or DataType.cLocalizedAssetString => true,
         _ => false
     };
     
@@ -147,7 +150,7 @@ public static class DataTypeExtensions
         DataType.Int32 => 4,
         DataType.UInt32 => 4,
         DataType.HashId => 4,
-        DataType.StringHash => 4,
+        DataType.ObjId  => 4,
         DataType.UInt16 => 2,
         DataType.UInt8 => 1,
         DataType.Float => 4,
@@ -159,13 +162,14 @@ public static class DataTypeExtensions
         DataType.Vector4 => 16,
         DataType.Orientation => 16,
         DataType.AssetPropertyVector => 8,  // count + pointer
+        DataType.cLocalizedAssetString => 8,  // Two 4-byte indicators
         _ => 4  // Default indicator size for dynamic types
     };
     
     /// <summary>Returns true if this type should be displayed in hex format.</summary>
     public static bool PreferHexFormat(this DataType type) => type switch
     {
-        DataType.HashId or DataType.StringHash or DataType.Key => true,
+        DataType.HashId or DataType.ObjId  or DataType.Key => true,
         _ => false
     };
 }
@@ -200,7 +204,7 @@ public sealed class StructDefinition
     {
         Name = name;
         Size = size;
-        Fields = fields.OrderBy(f => f.Offset).ToList();
+        Fields = fields.ToList();  // CRITICAL: Keep definition order! Blob data follows this order, NOT offset order.
     }
 }
 
@@ -289,8 +293,8 @@ public abstract class AssetCatalog
     protected static FieldDefinition HashId(string name, int offset)
         => new(name, DataType.HashId, offset);
     
-    protected static FieldDefinition StringHash(string name, int offset)
-        => new(name, DataType.StringHash, offset);
+    protected static FieldDefinition ObjId(string name, int offset)
+        => new(name, DataType.ObjId , offset);
     
     protected static FieldDefinition UInt16(string name, int offset)
         => new(name, DataType.UInt16, offset);
@@ -341,10 +345,16 @@ public abstract class AssetCatalog
     
     protected static FieldDefinition Asset(string name, int offset)
         => new(name, DataType.Asset, offset);
-    
+
+    protected static FieldDefinition LocalizedAssetString(string name, int offset)
+        => new(name, DataType.cLocalizedAssetString, offset);
+
     protected static FieldDefinition Array(string name, DataType elementType, int offset, int countOffset = 4)
         => new(name, DataType.Array, offset, elementType.ToString(), countOffset);
-    
+
+    protected static FieldDefinition ArrayEnum(string name, string enumType, int offset, int countOffset = 4)
+        => new(name, DataType.Array, offset, DataType.Enum.ToString(), countOffset, EnumType: enumType);
+
     protected static FieldDefinition ArrayStruct(string name, string structType, int offset, int countOffset = 4)
         => new(name, DataType.Array, offset, structType, countOffset);
     

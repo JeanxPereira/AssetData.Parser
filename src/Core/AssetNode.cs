@@ -134,6 +134,34 @@ public sealed class StringNode : AssetNode
 }
 
 /// <summary>
+/// Localized string node with primary and secondary values (cLocalizedAssetString).
+/// </summary>
+public sealed class LocalizedStringNode : AssetNode
+{
+    private string _primaryValue = string.Empty;
+    private string _secondaryValue = string.Empty;
+
+    public override AssetNodeKind Kind => AssetNodeKind.String;
+
+    public string PrimaryValue
+    {
+        get => _primaryValue;
+        set => SetField(ref _primaryValue, value);
+    }
+
+    public string SecondaryValue
+    {
+        get => _secondaryValue;
+        set => SetField(ref _secondaryValue, value);
+    }
+
+    public override string DisplayValue =>
+        string.IsNullOrEmpty(SecondaryValue)
+            ? PrimaryValue
+            : $"{PrimaryValue} [{SecondaryValue}]";
+}
+
+/// <summary>
 /// Numeric value node (int, uint, float, int64, uint64, uint16, uint8).
 /// </summary>
 public sealed class NumberNode : AssetNode
@@ -165,7 +193,7 @@ public sealed class NumberNode : AssetNode
         {
             NumericType.UInt8 => $"0x{(byte)Value:X2}",
             NumericType.UInt16 => $"0x{(ushort)Value:X4}",
-            NumericType.UInt32 or NumericType.HashId or NumericType.StringHash => $"0x{(uint)Value:X8}",
+            NumericType.UInt32 or NumericType.HashId or NumericType.ObjId => $"0x{(uint)Value:X8}",
             NumericType.UInt64 => $"0x{(ulong)Value:X16}",
             _ => $"0x{(long)Value:X}"
         },
@@ -316,7 +344,7 @@ public enum NumericType
     UInt16,
     UInt8,
     HashId,     // uint32 always displayed as hex
-    StringHash  // uint32 always displayed as hex
+    ObjId  // uint32 always displayed as hex
 }
 
 /// <summary>

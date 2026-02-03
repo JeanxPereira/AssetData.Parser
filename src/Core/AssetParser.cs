@@ -102,6 +102,59 @@ public sealed class AssetParser
             var catalog = (AssetCatalog)Activator.CreateInstance(type)!;
             MergeCatalog(catalog);
         }
+        ResolveEnumReferences();
+    }
+
+    private void ResolveEnumReferences()
+    {
+        foreach (var def in _globalStructs.Values)
+        {
+            var fieldsList = (List<FieldDefinition>)def.Fields;
+
+            for (int i = 0; i < fieldsList.Count; i++)
+            {
+                var field = fieldsList[i];
+                bool isEnum = field.Type == DataType.Enum;
+                bool isEnumArray = field.Type == DataType.Array && field.ElementType == "Enum";
+
+                if ((!isEnum && !isEnumArray) || field.EnumType != null)
+                    continue;
+
+                string? resolvedEnum = null;
+                
+                var specificName = $"{def.Name}.{field.Name}";
+                if (_globalEnums.ContainsKey(specificName))
+                {
+                    resolvedEnum = specificName;
+                }
+                else
+                {
+                    if (_globalEnums.ContainsKey(field.Name))
+                    {
+                        resolvedEnum = field.Name;
+                    }
+                    else
+                    {
+                        var pascalName = ToPascalCase(field.Name);
+                        if (_globalEnums.ContainsKey(pascalName))
+                        {
+                            resolvedEnum = pascalName;
+                        }
+                    }
+                }
+
+                if (resolvedEnum != null)
+                {
+                    fieldsList[i] = field with { EnumType = resolvedEnum };
+                }
+            }
+        }
+    }
+
+    private static string ToPascalCase(string s)
+    {
+        if (string.IsNullOrEmpty(s) || char.IsUpper(s[0])) return s;
+        return char.ToUpper(s[0]) + s.Substring(1);
     }
 
     private void MergeCatalog(AssetCatalog catalog)
@@ -223,7 +276,6 @@ public sealed class AssetParser
                     BinaryOffset = offset
                 },
                 
-                // HashId and StringHash are uint32 but prefer hex display
                 DataType.HashId => new NumberNode
                 {
                     Name = field.Name,
@@ -233,11 +285,11 @@ public sealed class AssetParser
                     BinaryOffset = offset
                 },
                 
-                DataType.StringHash => new NumberNode
+                DataType.ObjId => new NumberNode
                 {
                     Name = field.Name,
                     Value = ReadUInt32(offset),
-                    OriginalType = NumericType.StringHash,
+                    OriginalType = NumericType.ObjId,
                     Format = NumberFormat.Hex,
                     BinaryOffset = offset
                 },
@@ -339,7 +391,8 @@ public sealed class AssetParser
                 DataType.Char => ParseCharField(field, offset),
                 DataType.CharPtr => ParseCharPtrField(field, offset),
                 DataType.Asset => ParseAssetField(field, offset),
-                
+                DataType.cLocalizedAssetString => ParseLocalizedAssetStringField(field, offset),
+
                 // ═══════════════════════════════════════════════════════════
                 // Containers
                 // ═══════════════════════════════════════════════════════════
@@ -434,7 +487,7 @@ public sealed class AssetParser
     {
         uint indicator = ReadUInt32(offset);
         if (indicator == 0) return null;
-        
+
         return new StringNode
         {
             Name = field.Name,
@@ -443,7 +496,34 @@ public sealed class AssetParser
             BinaryOffset = offset
         };
     }
-    
+
+    private AssetNode? ParseLocalizedAssetStringField(FieldDefinition field, int offset)
+    {
+        uint indicator1 = ReadUInt32(offset);
+        uint indicator2 = ReadUInt32(offset + 4);
+
+        // Both indicators zero = null field
+        if (indicator1 == 0 && indicator2 == 0)
+            return null;
+
+        string primaryValue = "";
+        string secondaryValue = "";
+
+        if (indicator1 != 0)
+            primaryValue = _blob.ReadString();
+
+        if (indicator2 != 0)
+            secondaryValue = _blob.ReadString();
+
+        return new LocalizedStringNode
+        {
+            Name = field.Name,
+            PrimaryValue = primaryValue,
+            SecondaryValue = secondaryValue,
+            BinaryOffset = offset
+        };
+    }
+
     private ArrayNode ParseArrayField(FieldDefinition field, int offset)
     {
         uint hasValue = ReadUInt32(offset);
@@ -487,35 +567,58 @@ public sealed class AssetParser
             throw new InvalidOperationException($"Unknown element type: {field.ElementType}");
         
         // Handle dynamic types (strings) - each has a 4-byte indicator in the header array
+        // Special case: cLocalizedAssetString has 8 bytes (2 indicators)
         if (elemType.IsDynamic())
         {
-            int indicatorStart = _blob.ReserveArray(4, count);
-            
+            int indicatorSize = elemType == DataType.cLocalizedAssetString ? 8 : 4;
+            int indicatorStart = _blob.ReserveArray(indicatorSize, count);
+
             for (int i = 0; i < count; i++)
             {
-                int indicatorOffset = indicatorStart + (i * 4);
-                uint indicator = ReadUInt32(indicatorOffset);
-                
+                int indicatorOffset = indicatorStart + (i * indicatorSize);
+
                 AssetNode entry;
-                if (indicator != 0)
+
+                if (elemType == DataType.cLocalizedAssetString)
                 {
-                    entry = new StringNode
+                    uint indicator1 = ReadUInt32(indicatorOffset);
+                    uint indicator2 = ReadUInt32(indicatorOffset + 4);
+
+                    string primary = indicator1 != 0 ? _blob.ReadString() : "";
+                    string secondary = indicator2 != 0 ? _blob.ReadString() : "";
+
+                    entry = new LocalizedStringNode
                     {
                         Name = $"[{i}]",
-                        Value = _blob.ReadString(),
-                        NodeKind = elemType == DataType.Asset ? AssetNodeKind.Asset : AssetNodeKind.String,
+                        PrimaryValue = primary,
+                        SecondaryValue = secondary,
                         BinaryOffset = indicatorOffset
                     };
                 }
                 else
                 {
-                    entry = new StringNode
+                    uint indicator = ReadUInt32(indicatorOffset);
+
+                    if (indicator != 0)
                     {
-                        Name = $"[{i}]",
-                        Value = "",
-                        NodeKind = AssetNodeKind.String,
-                        BinaryOffset = indicatorOffset
-                    };
+                        entry = new StringNode
+                        {
+                            Name = $"[{i}]",
+                            Value = _blob.ReadString(),
+                            NodeKind = elemType == DataType.Asset ? AssetNodeKind.Asset : AssetNodeKind.String,
+                            BinaryOffset = indicatorOffset
+                        };
+                    }
+                    else
+                    {
+                        entry = new StringNode
+                        {
+                            Name = $"[{i}]",
+                            Value = "",
+                            NodeKind = AssetNodeKind.String,
+                            BinaryOffset = indicatorOffset
+                        };
+                    }
                 }
                 arrayNode.AddChild(entry);
             }
@@ -760,11 +863,11 @@ public sealed class AssetParser
             Format = NumberFormat.Hex,
             BinaryOffset = offset
         },
-        DataType.StringHash => new NumberNode
+        DataType.ObjId => new NumberNode
         {
             Name = name,
             Value = ReadUInt32(offset),
-            OriginalType = NumericType.StringHash,
+            OriginalType = NumericType.ObjId,
             Format = NumberFormat.Hex,
             BinaryOffset = offset
         },
@@ -790,13 +893,7 @@ public sealed class AssetParser
             Format = NumberFormat.Float,
             BinaryOffset = offset
         },
-        DataType.Enum => new EnumNode
-        {
-            Name = name,
-            EnumType = enumType ?? "",
-            RawValue = ReadUInt32(offset),
-            BinaryOffset = offset
-        },
+        DataType.Enum => CreateEnumNode(name, enumType, offset),
         DataType.Int64 => new NumberNode
         {
             Name = name,
@@ -813,7 +910,25 @@ public sealed class AssetParser
         },
         _ => throw new InvalidOperationException($"Not a primitive type: {type}")
     };
-    
+
+    private EnumNode CreateEnumNode(string name, string? enumType, int offset)
+    {
+        var rawValue = ReadUInt32(offset);
+        string? resolvedName = null;
+
+        if (enumType != null && _globalEnums.TryGetValue(enumType, out var enumDef))
+            resolvedName = enumDef.GetName(rawValue);
+
+        return new EnumNode
+        {
+            Name = name,
+            EnumType = enumType ?? "",
+            RawValue = rawValue,
+            ResolvedName = resolvedName ?? "",
+            BinaryOffset = offset
+        };
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // Binary readers using Span for performance
     // ═══════════════════════════════════════════════════════════════════════
