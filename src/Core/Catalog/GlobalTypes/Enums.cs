@@ -182,5 +182,76 @@ public sealed class Enums : AssetCatalog
             .Value("not_shadowed", 0)
             .Value("yes_shadowed", 1)
             .Value("inv_shadowed", 2);
+
+        Enum("NonPlayerClass.creatureType")
+            .Value("technology", 0)
+            .Value("spacetime", 1)
+            .Value("life", 2)
+            .Value("elements", 3)
+            .Value("supernatural", 4)
+            .Value("generic", 5);
+
+        Enum("NonPlayerClass.mNPCType")
+            .Value("minion", 0)
+            .Value("special", 1)
+            .Value("boss", 2)
+            .Value("destructible", 3)
+            .Value("interactable", 4)
+            .Value("agent", 5)
+            .Value("victim", 6)
+            .Value("captain", 7);
+
+        Enum("NonPlayerClass.dropType")
+            .Value("none", 1)
+            .Value("orbs", 2)
+            .Value("catalysts", 4)
+            .Value("loot", 8)
+            .Value("dna", 10);
+
+        Enum("cGfxComponentDef.gfxType")
+            .Value("spore model", 0)
+            .Value("swarm effect", 1)
+            .Value("creature", 2)
+            .Value("building", 3)
+            .Value("vehicle", 4)
+            .Value("flor", 5)
+            .Value("labs model", 6);
+
+        Enum("CrystalDef.type")
+            .Value("red", 3)
+            .Value("blue", 0)
+            .Value("gold", 2)
+            .Value("green", 4)
+            .Value("wild", 1);
+
+        Enum("CrystalDef.rarity")
+            .Value("common", 0)
+            .Value("rare", 1)
+            .Value("epic", 2);
+
+        Enum("cHarpointInfo.type")
+            .Value("none", 0)
+            .Value("bottom", 1)
+            .Value("center", 2)
+            .Value("top", 3)
+            .Value("body part", 4)
+            .Value("left side body part", 5)
+            .Value("right side body part", 6)
+            .Value("local offset", 7)
+            .Value("rightmost body part", 8);
+
+        Enum("cHardpointInfo.bodyCap")
+            .Value("base", 0x0)
+            .Value("root", 0x746F6F72)
+            .Value("limb", 0x626D696C)
+            .Value("foot", 0x746F6F66)
+            .Value("spine", 0x6E697073)
+            .Value("pseudoFoot", 0x74667370)
+            .Value("mouth", 0x74756F6D)
+            .Value("grasper", 0x70737267)
+            .Value("noStretch", 0x7274736E)
+            .Value("weapon", 0x7772636C)
+            .Value("eye", 0x00657965);
+            // .Value("ear", 0x00726165)
     }
 }

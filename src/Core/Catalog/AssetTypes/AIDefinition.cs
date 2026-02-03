@@ -1,10 +1,6 @@
 namespace ReCap.Parser.Catalog;
 
-/// <summary>
-/// AI Definition - creature AI behavior tree.
-/// Size: 640 bytes
-/// </summary>
-public sealed class AIDefinitionCatalog : AssetCatalog
+public sealed class AIDefinition : AssetCatalog
 {
     protected override void Build()
     {

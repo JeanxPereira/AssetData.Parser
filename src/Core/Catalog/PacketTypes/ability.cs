@@ -1,10 +1,6 @@
 namespace ReCap.Parser.Catalog;
 
-/// <summary>
-/// Ability definition - creature/player abilities.
-/// Size: 488 bytes (0x1E8)
-/// </summary>
-public sealed class AbilityCatalog : AssetCatalog
+public sealed class Ability : AssetCatalog
 {
     protected override void Build()
     {
