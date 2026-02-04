@@ -22,14 +22,6 @@ public static partial class Program
             return 1;
         }
 
-        if (args.Length > 0 && args[0] == "wiki-gen")
-        {
-            string wikiOutputDir = args.Length > 1 ? args[1] : "./wiki-output";
-            WikiCatalog.Run(wikiOutputDir);
-            
-            return 0;
-        }
-
         // Parse arguments
         string? inputFile = null;
         string? dbpfPackage = null;
@@ -563,7 +555,6 @@ public static partial class Program
                     Console.Write(sn.Value);
                     break;
                 case NumberNode nn:
-                    // Se for HashId/StringHash/Hex, pinta de Azul, senão Magenta
                     if (nn.Format == NumberFormat.Hex)
                         Console.ForegroundColor = ConsoleColor.Blue;
                     else
@@ -576,7 +567,6 @@ public static partial class Program
                     Console.Write(bn.DisplayValue);
                     break;
                 case EnumNode en:
-                    // Azul para enums
                     Console.ForegroundColor = ConsoleColor.Blue; 
                     Console.Write(en.DisplayValue);
                     break;
@@ -589,7 +579,7 @@ public static partial class Program
                     Console.Write(sn.TypeName);
                     break;
                 case AssetNode an when an.Kind == AssetNodeKind.Asset:
-                    Console.ForegroundColor = ConsoleColor.Green; // Asset path verde
+                    Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write(an.DisplayValue);
                     break;
                 default:
@@ -599,7 +589,6 @@ public static partial class Program
             }
         }
         
-        // --- Fechar ---
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write(")");
         Console.ResetColor();

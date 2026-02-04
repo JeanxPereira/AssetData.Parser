@@ -10,6 +10,7 @@ on:
       - "LICENSE"
       - ".gitignore"
       - "docs/**"
+      - "src/Wiki"
   pull_request:
     branches: [ "main" ]
     paths-ignore:

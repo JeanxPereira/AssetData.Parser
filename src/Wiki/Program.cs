@@ -1,16 +1,36 @@
 using System.Text;
 using ReCap.Parser;
 
-namespace ReCap.Parser.CLI.Commands;
+namespace ReCap.Wiki;
 
-public static class WikiCatalog
+/// <summary>
+/// Wiki generator for ReCap.Parser asset catalog documentation.
+/// </summary>
+public static class Program
 {
     private static readonly Dictionary<string, HashSet<string>> _usagesMap = new();
     private const string FolderStructures = "Structures";
     private const string FolderEnums = "Enums";
     private const string FolderCatalog = "Catalog";
 
-    public static void Run(string outputDir)
+    public static int Main(string[] args)
+    {
+        string outputDir = args.Length > 0 ? args[0] : "./wiki-output";
+        
+        try
+        {
+            GenerateWiki(outputDir);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            Console.Error.WriteLine(ex.StackTrace);
+            return 1;
+        }
+    }
+
+    private static void GenerateWiki(string outputDir)
     {
         Console.WriteLine($"[WikiGen] Generating Wiki in: {outputDir}");
 
@@ -30,10 +50,17 @@ public static class WikiCatalog
         var loadedCatalogs = new List<AssetCatalog>();
         foreach (var type in catalogTypes)
         {
-            try { loadedCatalogs.Add((AssetCatalog)Activator.CreateInstance(type)!); }
-            catch { Console.WriteLine($"[WikiGen] Warning: Failed to instantiate {type.Name}"); }
+            try 
+            { 
+                loadedCatalogs.Add((AssetCatalog)Activator.CreateInstance(type)!); 
+            }
+            catch 
+            { 
+                Console.WriteLine($"[WikiGen] Warning: Failed to instantiate {type.Name}"); 
+            }
         }
 
+        ResolveEnumReferences(loadedCatalogs);
         BuildDependencyGraph(loadedCatalogs);
 
         var allStructs = new List<string>();
@@ -62,6 +89,73 @@ public static class WikiCatalog
 
         GenerateSidebar(outputDir, allStructs, allEnums);
         Console.WriteLine($"[WikiGen] Done! {allStructs.Count} Structures, {allEnums.Count} Enums.");
+    }
+
+    private static void ResolveEnumReferences(List<AssetCatalog> catalogs)
+    {
+        var globalEnumNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var cat in catalogs)
+        {
+            foreach (var e in cat.EnumNames) globalEnumNames.Add(e);
+        }
+
+        Console.WriteLine($"[WikiGen] Resolving references for {globalEnumNames.Count} Enums...");
+
+        foreach (var cat in catalogs)
+        {
+            foreach (var structName in cat.StructNames)
+            {
+                var def = cat.GetStruct(structName);
+                if (def == null) continue;
+
+                var fieldsList = (List<FieldDefinition>)def.Fields;
+
+                for (int i = 0; i < fieldsList.Count; i++)
+                {
+                    var field = fieldsList[i];
+                    bool isEnum = field.Type == DataType.Enum;
+                    bool isEnumArray = field.Type == DataType.Array && field.ElementType == "Enum";
+
+                    if ((!isEnum && !isEnumArray) || field.EnumType != null)
+                        continue;
+
+                    string? resolvedEnum = null;
+                    var specificName = $"{def.Name}.{field.Name}";
+                    if (globalEnumNames.Contains(specificName))
+                    {
+                        resolvedEnum = specificName;
+                    }
+                    else
+                    {
+                        if (globalEnumNames.Contains(field.Name))
+                        {
+                            resolvedEnum = field.Name;
+                        }
+                        else
+                        {
+                            var pascalName = ToPascalCase(field.Name);
+                            if (globalEnumNames.Contains(pascalName))
+                            {
+                                resolvedEnum = pascalName;
+                            }
+                        }
+                    }
+
+                    if (resolvedEnum != null)
+                    {
+                        fieldsList[i] = field with { EnumType = resolvedEnum };
+                        Console.WriteLine($"   Linked: {def.Name}.{field.Name} -> {resolvedEnum}");
+                    }
+                }
+            }
+        }
+    }
+
+    private static string ToPascalCase(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        if (char.IsUpper(s[0])) return s;
+        return char.ToUpper(s[0]) + s.Substring(1);
     }
 
     private static void GenerateSidebar(string outputDir, List<string> structs, List<string> enums)
@@ -115,9 +209,10 @@ public static class WikiCatalog
                     if (field.Type == DataType.Struct) dep = field.ElementType;
                     else if (field.Type == DataType.Nullable) dep = field.ElementType;
                     else if (field.Type == DataType.Enum) dep = field.EnumType;
-                    else if (field.Type == DataType.Array && field.ElementType != null)
+                    else if (field.Type == DataType.Array)
                     {
-                         if (!Enum.TryParse<DataType>(field.ElementType, true, out _))
+                        if (field.ElementType == "Enum") dep = field.EnumType;
+                        else if (field.ElementType != null && !Enum.TryParse<DataType>(field.ElementType, true, out _))
                             dep = field.ElementType;
                     }
 
@@ -193,7 +288,7 @@ public static class WikiCatalog
             var name = field.ElementType ?? "Unknown";
             return $"[`({name})`]({name})";
         }
-
+        
         if (field.Type == DataType.Nullable)
         {
             var name = field.ElementType ?? "Unknown";
@@ -203,7 +298,7 @@ public static class WikiCatalog
         if (field.Type == DataType.Enum)
         {
             var name = field.EnumType ?? "Unknown";
-            return $"`Enum` [`({name})`]({name})";
+            return name != "Unknown" ? $"`Enum` [`({name})`]({name})" : $"`Enum` `({name})`";
         }
 
         if (field.Type == DataType.Array)
@@ -211,7 +306,14 @@ public static class WikiCatalog
             var inner = field.ElementType ?? "Unknown";
             bool isComplexType = !Enum.TryParse<DataType>(inner, true, out _);
             
-            if (isComplexType)
+            if (inner == "Enum")
+            {
+                 var enumName = field.EnumType ?? "Unknown";
+                 return enumName != "Unknown" 
+                    ? $"`Array` `Enum` [`({enumName})`]({enumName})" 
+                    : $"`Array` `Enum`";
+            }
+            else if (isComplexType)
             {
                 return $"`Array` [`({inner})`]({inner})";
             }

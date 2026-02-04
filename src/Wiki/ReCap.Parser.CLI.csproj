@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>13</LangVersion>
+    <AssemblyName>ReCap.Parser</AssemblyName>
+    <RootNamespace>ReCap.Parser.Wiki</RootNamespace>
+    <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\ReCap.Parser.csproj" />
+  </ItemGroup>
+
+</Project>
