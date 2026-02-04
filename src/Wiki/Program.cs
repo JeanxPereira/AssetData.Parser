@@ -239,7 +239,7 @@ public static class Program
     private static string GenerateMarkdownForStruct(StructDefinition def)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"# {def.Name}");
+        // sb.AppendLine($"# {def.Name}");
         sb.AppendLine($"**Size:** `0x{def.Size:X}`");
         sb.AppendLine($"**Count:** `0x{def.Fields.Count:X}`");
         sb.AppendLine();
