@@ -261,8 +261,8 @@ public static class Program
     private static string GenerateMarkdownForEnum(EnumDefinition def)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"# {def.Name}");
-        sb.AppendLine();
+        // sb.AppendLine($"# {def.Name}");
+        // sb.AppendLine();
         sb.AppendLine("## Values");
         sb.AppendLine("| Value | Name |");
         sb.AppendLine("| :-: | :- |");
