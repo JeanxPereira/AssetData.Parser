@@ -2,19 +2,19 @@
 // DEPRECATED - Moved to Core library as AssetNodeKind
 // =============================================================================
 // 
-// Use ReCap.Parser.AssetNodeKind from the Core library instead.
+// Use AssetData.Parser.AssetNodeKind from the Core library instead.
 // This file can be safely deleted.
 // =============================================================================
 
-namespace ReCap.Parser.Editor.Models
+namespace AssetData.Parser.Editor.Models
 {
-    [Obsolete("Use ReCap.Parser.AssetNodeKind from Core library")]
+    [Obsolete("Use AssetData.Parser.AssetNodeKind from Core library")]
     public enum ValueKind
     {
-        String = ReCap.Parser.AssetNodeKind.String,
-        Number = ReCap.Parser.AssetNodeKind.Number,
-        Bool = ReCap.Parser.AssetNodeKind.Bool,
-        Struct = ReCap.Parser.AssetNodeKind.Struct,
-        Array = ReCap.Parser.AssetNodeKind.Array
+        String = AssetData.Parser.AssetNodeKind.String,
+        Number = AssetData.Parser.AssetNodeKind.Number,
+        Bool = AssetData.Parser.AssetNodeKind.Bool,
+        Struct = AssetData.Parser.AssetNodeKind.Struct,
+        Array = AssetData.Parser.AssetNodeKind.Array
     }
 }

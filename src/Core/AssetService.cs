@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 
-namespace ReCap.Parser;
+namespace AssetData.Parser;
 
 /// <summary>
 /// Serializes AssetNode trees to various formats.

@@ -1,10 +1,10 @@
 using System.Text;
-using ReCap.Parser;
+using AssetData.Parser;
 
 namespace ReCap.Wiki;
 
 /// <summary>
-/// Wiki generator for ReCap.Parser asset catalog documentation.
+/// Wiki generator for AssetData.Parser asset catalog documentation.
 /// </summary>
 public static class Program
 {
@@ -165,7 +165,7 @@ public static class Program
         // Header with icon
         sb.AppendLine("<h3>");
         sb.AppendLine("  <img");
-        sb.AppendLine("    src=\"https://raw.githubusercontent.com/JeanxPereira/ReCap.Parser/refs/heads/main/.github/icon.png\"");
+        sb.AppendLine("    src=\"https://raw.githubusercontent.com/JeanxPereira/AssetData.Parser/refs/heads/main/.github/icon.png\"");
         sb.AppendLine("    width=\"32\"");
         sb.AppendLine("    align=\"center\"");
         sb.AppendLine("  />");
@@ -174,7 +174,7 @@ public static class Program
         sb.AppendLine();
         
         sb.AppendLine("## Base");
-        sb.AppendLine("* **[Home](https://github.com/JeanxPereira/ReCap.Parser/wiki/Home )**");
+        sb.AppendLine("* **[Home](https://github.com/JeanxPereira/AssetData.Parser/wiki/Home )**");
         sb.AppendLine();
 
         sb.AppendLine("## Catalog Assets");

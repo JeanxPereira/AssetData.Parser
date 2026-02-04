@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
 
-namespace ReCap.Parser;
+namespace AssetData.Parser;
 
 /// <summary>
 /// Sequential blob data reader. Cursor advances automatically as data is read.

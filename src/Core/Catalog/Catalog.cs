@@ -1,4 +1,4 @@
-namespace ReCap.Parser.Catalog;
+namespace AssetData.Parser.Catalog;
 
 /// <summary>
 /// Asset catalog root structure.

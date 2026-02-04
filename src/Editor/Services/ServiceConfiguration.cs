@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using ReCap.Parser;
-using ReCap.Parser.Editor.ViewModels;
+using AssetData.Parser;
+using AssetData.Parser.Editor.ViewModels;
 
-namespace ReCap.Parser.Editor.Services;
+namespace AssetData.Parser.Editor.Services;
 
 /// <summary>
 /// Dependency Injection configuration for the Editor.

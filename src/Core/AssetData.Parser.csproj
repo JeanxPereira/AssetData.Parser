@@ -8,8 +8,8 @@
     
     <!-- Library only - no entry point -->
     <OutputType>Library</OutputType>
-    <AssemblyName>ReCap.Parser.Core</AssemblyName>
-    <RootNamespace>ReCap.Parser</RootNamespace>
+    <AssemblyName>AssetData.Parser.Core</AssemblyName>
+    <RootNamespace>AssetData.Parser</RootNamespace>
   </PropertyGroup>
 
 </Project>

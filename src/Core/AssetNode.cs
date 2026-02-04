@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace ReCap.Parser;
+namespace AssetData.Parser;
 
 /// <summary>
 /// Base class for all parsed asset nodes. Observable for MVVM binding.

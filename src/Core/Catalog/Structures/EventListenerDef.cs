@@ -1,4 +1,4 @@
-namespace ReCap.Parser.Catalog;
+namespace AssetData.Parser.Catalog;
 
 public sealed class EventListenerDef : AssetCatalog
 {

@@ -1,11 +1,11 @@
-<!-- src/ReCap.Parser.Editor/MainWindow.axaml -->
+<!-- src/AssetData.Parser.Editor/MainWindow.axaml -->
 <Window xmlns="https://github.com/avaloniaui" 
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:core="clr-namespace:ReCap.Parser;assembly=ReCap.Parser.Core"
-        xmlns:vm="clr-namespace:ReCap.Parser.Editor.ViewModels"
-        xmlns:panels="clr-namespace:ReCap.Parser.Editor.Views.Panels"
-        xmlns:local="clr-namespace:ReCap.Parser.Editor"
-        x:Class="ReCap.Parser.Editor.MainWindow"
+        xmlns:core="clr-namespace:AssetData.Parser;assembly=AssetData.Parser.Core"
+        xmlns:vm="clr-namespace:AssetData.Parser.Editor.ViewModels"
+        xmlns:panels="clr-namespace:AssetData.Parser.Editor.Views.Panels"
+        xmlns:local="clr-namespace:AssetData.Parser.Editor"
+        x:Class="AssetData.Parser.Editor.MainWindow"
         x:CompileBindings="False"
         Width="1200" Height="720"
         Title="AssetData Editor"

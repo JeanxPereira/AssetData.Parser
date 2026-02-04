@@ -10,12 +10,12 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
-using ReCap.Parser;
-using ReCap.Parser.Editor.Services;
-using ReCap.Parser.Editor.ViewModels;
-using ReCap.Parser.Editor.Views.Windows;
+using AssetData.Parser;
+using AssetData.Parser.Editor.Services;
+using AssetData.Parser.Editor.ViewModels;
+using AssetData.Parser.Editor.Views.Windows;
 
-namespace ReCap.Parser.Editor;
+namespace AssetData.Parser.Editor;
 
 public partial class MainWindow : Window
 {

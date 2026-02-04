@@ -7,7 +7,7 @@
  * - Default Values: Passed as raw hex arguments to `ContainerStrategy::Get(HEX)`.
  *   Note: These hex values are IEEE 754 float representations (e.g., 0x42340000 converts to 45.0f for FOV).
  */
-namespace ReCap.Parser.Catalog;
+namespace AssetData.Parser.Catalog;
 
 public sealed class cMapCameraData : AssetCatalog
 {

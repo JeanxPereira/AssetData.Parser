@@ -2,7 +2,7 @@
 using Avalonia;
 using Avalonia.Win32;
 
-namespace ReCap.Parser.Editor
+namespace AssetData.Parser.Editor
 {
     public static class Program
     {

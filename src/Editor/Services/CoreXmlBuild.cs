@@ -11,7 +11,7 @@
 // This file can be safely deleted.
 // =============================================================================
 
-namespace ReCap.Parser.Editor.Services
+namespace AssetData.Parser.Editor.Services
 {
     [Obsolete("Use AssetService from Core library directly. XML bridge eliminated.")]
     public static class CoreXmlBridge

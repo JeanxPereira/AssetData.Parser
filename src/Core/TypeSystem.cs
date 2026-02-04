@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ReCap.Parser;
+namespace AssetData.Parser;
 
 /// <summary>
 /// Darkspore asset data types. Hash values are FNV-1a (case-insensitive) from the actual game binary.

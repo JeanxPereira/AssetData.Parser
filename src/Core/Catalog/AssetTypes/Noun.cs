@@ -1,4 +1,4 @@
-namespace ReCap.Parser.Catalog;
+namespace AssetData.Parser.Catalog;
 
 /// <summary>
 /// Noun definition - the main game object type.

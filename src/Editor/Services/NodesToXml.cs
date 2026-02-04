@@ -8,16 +8,16 @@
 // This file can be safely deleted.
 // =============================================================================
 
-namespace ReCap.Parser.Editor.Services
+namespace AssetData.Parser.Editor.Services
 {
-    [Obsolete("Use ReCap.Parser.AssetSerializer.ToXml() from Core library")]
+    [Obsolete("Use AssetData.Parser.AssetSerializer.ToXml() from Core library")]
     public static class NodesToXml
     {
         [Obsolete("Use AssetSerializer.ToXml() from Core library")]
-        public static System.Xml.Linq.XDocument ToXDocument(ReCap.Parser.AssetNode root)
+        public static System.Xml.Linq.XDocument ToXDocument(AssetData.Parser.AssetNode root)
         {
             // Delegate to new Core implementation
-            return ReCap.Parser.AssetSerializer.ToXml(root);
+            return AssetData.Parser.AssetSerializer.ToXml(root);
         }
     }
 }

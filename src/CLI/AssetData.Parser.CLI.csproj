@@ -6,13 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>13</LangVersion>
-    <AssemblyName>ReCap.Parser</AssemblyName>
-    <RootNamespace>ReCap.Parser.Wiki</RootNamespace>
+    <AssemblyName>AssetData.Parser</AssemblyName>
+    <RootNamespace>AssetData.Parser.CLI</RootNamespace>
     <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\ReCap.Parser.csproj" />
+    <ProjectReference Include="..\Core\AssetData.Parser.csproj" />
   </ItemGroup>
 
 </Project>

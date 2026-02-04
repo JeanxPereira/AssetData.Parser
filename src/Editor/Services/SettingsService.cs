@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 
-namespace ReCap.Parser.Editor.Services
+namespace AssetData.Parser.Editor.Services
 {
     public sealed class EditorSettings
     {
@@ -27,7 +27,7 @@ namespace ReCap.Parser.Editor.Services
 
     public static class SettingsService
     {
-        static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ReCap.Parser", "Editor");
+        static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AssetData.Parser", "Editor");
         static readonly string FilePath = Path.Combine(Dir, "settings.json");
 
         public static EditorSettings Load()

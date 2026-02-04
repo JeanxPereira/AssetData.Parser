@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace ReCap.Parser;
+namespace AssetData.Parser;
 
 /// <summary>
 /// Resource key identifying an asset in a DBPF archive.

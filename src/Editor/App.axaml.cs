@@ -1,10 +1,10 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using ReCap.Parser.Editor.Services;
-using ReCap.Parser.Editor.ViewModels;
+using AssetData.Parser.Editor.Services;
+using AssetData.Parser.Editor.ViewModels;
 
-namespace ReCap.Parser.Editor;
+namespace AssetData.Parser.Editor;
 
 public partial class App : Application
 {

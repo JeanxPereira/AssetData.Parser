@@ -2,9 +2,9 @@ using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ReCap.Parser;
+using AssetData.Parser;
 
-namespace ReCap.Parser.Editor.ViewModels;
+namespace AssetData.Parser.Editor.ViewModels;
 
 /// <summary>
 /// Represents an entry in the DBPF package browser (from Catalog).

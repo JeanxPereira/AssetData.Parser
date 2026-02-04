@@ -2,11 +2,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using ReCap.Parser;
-using ReCap.Parser.Editor.Services;
-using ReCap.Parser.Editor.ViewModels;
+using AssetData.Parser;
+using AssetData.Parser.Editor.Services;
+using AssetData.Parser.Editor.ViewModels;
 
-namespace ReCap.Parser.Editor.Views.Windows;
+namespace AssetData.Parser.Editor.Views.Windows;
 
 public partial class PackageBrowserWindow : Window
 {

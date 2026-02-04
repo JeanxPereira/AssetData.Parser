@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
 using System.Xml;
-using ReCap.Parser;
+using AssetData.Parser;
 
-namespace ReCap.Parser.CLI;
+namespace AssetData.Parser.CLI;
 
 /// <summary>
-/// CLI for ReCap.Parser with DBPF support.
+/// CLI for AssetData.Parser with DBPF support.
 /// </summary>
 public static partial class Program
 {
@@ -646,14 +646,14 @@ public static partial class Program
     private static void PrintUsage()
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("ReCap.Parser");
+        Console.WriteLine("AssetData.Parser");
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.WriteLine("Darkspore Binary Asset Parser\n");
         Console.ResetColor();
         
         Console.WriteLine(@"Usage:
-  ReCap.Parser <file>                     Parse single asset file
-  ReCap.Parser -d <package> [options]     Parse from DBPF package
+  AssetData.Parser <file>                     Parse single asset file
+  AssetData.Parser -d <package> [options]     Parse from DBPF package
 
 Single File Options:
   <file>              Input asset file (.noun, .phase, etc.)
@@ -680,20 +680,20 @@ Examples:");
         
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine("  # Parse single file");
-        Console.WriteLine("  ReCap.Parser creature.noun --xml -o output/");
+        Console.WriteLine("  AssetData.Parser creature.noun --xml -o output/");
         Console.WriteLine();
         Console.WriteLine("  # List assets in package");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -l -t noun");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -l");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -l -t noun");
         Console.WriteLine();
         Console.WriteLine("  # Parse specific asset");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a default.AffixTuning -r registries -v");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a ZelemBoss.phase -r registries -o output/");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -a default.AffixTuning -r registries -v");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -a ZelemBoss.phase -r registries -o output/");
         Console.WriteLine();
         Console.WriteLine("  # Random asset selection");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:Phase -r registries -v");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:Noun:5 -r registries");
-        Console.WriteLine("  ReCap.Parser -d AssetData_Binary.package -a random:*:3 -r registries --seed 42");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -a random:Phase -r registries -v");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -a random:Noun:5 -r registries");
+        Console.WriteLine("  AssetData.Parser -d AssetData_Binary.package -a random:*:3 -r registries --seed 42");
         Console.ResetColor();
     }
 }

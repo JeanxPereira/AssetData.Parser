@@ -51,20 +51,20 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/ReCap.Parser.sln') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/AssetData.Parser.sln') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
     - name: Restore Dependencies
-      run: dotnet restore ReCap.Parser.sln
+      run: dotnet restore AssetData.Parser.sln
 
     - name: Run Tests
-      run: dotnet test ReCap.Parser.sln --no-restore --verbosity normal
+      run: dotnet test AssetData.Parser.sln --no-restore --verbosity normal
       continue-on-error: true
 
     - name: Publish CLI
       run: >
-        dotnet publish src/CLI/ReCap.Parser.CLI.csproj 
+        dotnet publish src/CLI/AssetData.Parser.CLI.csproj 
         -c Release 
         -r ${{ matrix.rid }} 
         --self-contained true 
@@ -75,7 +75,7 @@ jobs:
 
     - name: Publish Editor
       run: >
-        dotnet publish src/Editor/ReCap.Parser.Editor.csproj 
+        dotnet publish src/Editor/AssetData.Parser.Editor.csproj 
         -c Release 
         -r ${{ matrix.rid }} 
         --self-contained true 

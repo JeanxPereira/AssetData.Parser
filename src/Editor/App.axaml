@@ -3,7 +3,7 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:rc="using:ReCap.CommonUI"
   RequestedThemeVariant="Dark"
-  x:Class="ReCap.Parser.Editor.App">
+  x:Class="AssetData.Parser.Editor.App">
   
   <Application.Styles>
     <rc:ReCapTheme/>
@@ -38,7 +38,7 @@
     <Color x:Key="SystemAccentColorLight1">#5BDEF3</Color>
     <Color x:Key="SystemAccentColorLight2">#93F5FF</Color>
 
-    <FontFamily x:Key="Geist">avares://ReCap.Parser.Editor/Assets/Geist#Geist</FontFamily>
-    <FontFamily x:Key="GeistMono">avares://ReCap.Parser.Editor/Assets/GeistMono#Geist Mono</FontFamily>
+    <FontFamily x:Key="Geist">avares://AssetData.Parser.Editor/Assets/Geist#Geist</FontFamily>
+    <FontFamily x:Key="GeistMono">avares://AssetData.Parser.Editor/Assets/GeistMono#Geist Mono</FontFamily>
   </Application.Resources>
 </Application>

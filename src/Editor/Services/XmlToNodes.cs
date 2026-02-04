@@ -11,13 +11,13 @@
 // This file can be safely deleted.
 // =============================================================================
 
-namespace ReCap.Parser.Editor.Services
+namespace AssetData.Parser.Editor.Services
 {
     [Obsolete("Core now returns AssetNode directly. No XML conversion needed.")]
     public static class XmlToNodes
     {
         [Obsolete("Use AssetService.LoadFile() which returns AssetNode directly")]
-        public static List<ReCap.Parser.AssetNode> FromXDocument(System.Xml.Linq.XDocument doc)
+        public static List<AssetData.Parser.AssetNode> FromXDocument(System.Xml.Linq.XDocument doc)
         {
             throw new NotSupportedException(
                 "XML conversion has been removed. Core returns AssetNode directly.");

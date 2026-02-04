@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ReCap.Parser;
+using AssetData.Parser;
 
-namespace ReCap.Parser.Editor.ViewModels;
+namespace AssetData.Parser.Editor.ViewModels;
 
 /// <summary>
 /// Main ViewModel for the asset editor. Uses CommunityToolkit.Mvvm for clean MVVM pattern.

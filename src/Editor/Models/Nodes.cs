@@ -1,9 +1,9 @@
 // =============================================================================
-// DEPRECATED - Models moved to Core library (ReCap.Parser)
+// DEPRECATED - Models moved to Core library (AssetData.Parser)
 // =============================================================================
 // 
 // The node models are now part of the Core library as AssetNode hierarchy.
-// Import from: using ReCap.Parser;
+// Import from: using AssetData.Parser;
 //
 // Available types:
 // - AssetNode (base class)

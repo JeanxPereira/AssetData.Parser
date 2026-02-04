@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>WinExe</OutputType>
-    <AssemblyName>ReCap.Parser.Editor</AssemblyName>
+    <AssemblyName>AssetData.Parser.Editor</AssemblyName>
     <ApplicationIcon>..\Assets\AppIcon.ico</ApplicationIcon>
     <LangVersion>13</LangVersion>
     
@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\ReCap.Parser.csproj" />
+    <ProjectReference Include="..\Core\AssetData.Parser.csproj" />
     <ProjectReference Include="..\ReCap.CommonUI\ReCap.CommonUI.csproj" />
   </ItemGroup>
 

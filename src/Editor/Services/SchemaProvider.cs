@@ -15,9 +15,9 @@
 // This file can be safely deleted.
 // =============================================================================
 
-using ReCap.Parser;
+using AssetData.Parser;
 
-namespace ReCap.Parser.Editor.Services
+namespace AssetData.Parser.Editor.Services
 {
     [Obsolete("Schema info is now embedded in AssetNode. Use AssetService for schema lookup.")]
     public static class SchemaProvider

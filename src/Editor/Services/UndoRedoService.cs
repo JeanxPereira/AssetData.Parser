@@ -1,6 +1,6 @@
-using ReCap.Parser;
+using AssetData.Parser;
 
-namespace ReCap.Parser.Editor.Services;
+namespace AssetData.Parser.Editor.Services;
 
 /// <summary>
 /// Represents an undoable/redoable action.

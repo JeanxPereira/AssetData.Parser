@@ -9,15 +9,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 
 # Core Library
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReCap.Parser.Core", "src\Core\ReCap.Parser.csproj", "{3244666E-E8DF-4B7C-8427-0444AE4CE22E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetData.Parser.Core", "src\Core\AssetData.Parser.csproj", "{3244666E-E8DF-4B7C-8427-0444AE4CE22E}"
 EndProject
 
 # CLI Application
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReCap.Parser.CLI", "src\CLI\ReCap.Parser.CLI.csproj", "{B1234567-AAAA-BBBB-CCCC-DDDDEEEEEFFF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetData.Parser.CLI", "src\CLI\AssetData.Parser.CLI.csproj", "{B1234567-AAAA-BBBB-CCCC-DDDDEEEEEFFF}"
 EndProject
 
 # Editor Application
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReCap.Parser.Editor", "src\Editor\ReCap.Parser.Editor.csproj", "{0EF8407E-903B-432D-9E6A-39F6C141B428}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetData.Parser.Editor", "src\Editor\AssetData.Parser.Editor.csproj", "{0EF8407E-903B-432D-9E6A-39F6C141B428}"
 EndProject
 
 # Common UI Library

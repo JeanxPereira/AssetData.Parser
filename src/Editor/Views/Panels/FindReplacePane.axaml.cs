@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace ReCap.Parser.Editor.Views.Panels
+namespace AssetData.Parser.Editor.Views.Panels
 {
     public partial class FindReplacePane : UserControl
     {
